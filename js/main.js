@@ -64,7 +64,7 @@ function init() {
   console.log('游戏初始化完成');
 }
 
-// 调整画布大小
+// 调整画布大小 - 确保场地正确居中
 function resize() {
   const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
   const w = Math.floor(window.innerWidth);
@@ -76,7 +76,13 @@ function resize() {
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   view.w = w;
   view.h = h;
-  view.scale = Math.min(w / WORLD.w, h / WORLD.h);
+  
+  // 场地居中缩放，确保完全可见
+  const scaleX = w / WORLD.w;
+  const scaleY = h / WORLD.h;
+  view.scale = Math.min(scaleX, scaleY, 1.5); // 限制最大缩放
+  
+  // 场地居中
   view.ox = (w - WORLD.w * view.scale) / 2;
   view.oy = (h - WORLD.h * view.scale) / 2;
   
