@@ -1,27 +1,4 @@
-// 游戏核心配置 - 调整视口避免重叠和缩放问题
-export const WORLD = { w: 800, h: 1200 }; // 调整宽高比
-export const WALL_H = 120; // 减少墙壁高度
-export const SLING = { x: WORLD.w / 2, y: WORLD.h - WALL_H - 20, r: 44 };
-export const ARENA = {
-  l: 350,  // 向右移动，避免与左侧卡牌重叠
-  r: WORLD.w - 50,  // 右侧留出空间
-  t: 250,  // 向下收缩
-  b: WORLD.h - WALL_H - 150,  // 向上收缩
-};
-export const PORTAL = { x: (ARENA.l + ARENA.r) / 2, y: ARENA.t - 68, r: 70 }; // 传送门居中于场地
-
-// 游戏平衡参数
-export const GAME_BALANCE = {
-  initialMana: 0,
-  maxMana: 10,
-  manaRegen: 1.35, // per second
-  wallHp: 52,
-  wallMaxHp: 52,
-  portalHp: 120,
-  portalMaxHp: 120,
-};
-
-// 卡牌配置
+// 完整的卡牌系统
 export const CARDS = [
   {
     id: "knight",
@@ -31,11 +8,12 @@ export const CARDS = [
     weight: 1.05,
     radius: 26,
     color: "#ff78b8",
-    drag: 1.85,
-    launchSpeedMul: 1.15,
-    effect: "trail",
-    life: 12,
+    drag: 1.85, // 较慢减速，保持冲劲
+    launchSpeedMul: 1.15, // 发射速度较快
+    effect: "trail", // 粒子尾迹
+    life: 12, // 存在时间（秒），会随时间慢慢消失
     desc: "停下后：冲击波，震开附近怪物。",
+    // 只触发一次的驻场冲击波
     onStop: { kind: "shockwave", cd: 0.75, dmg: 10, radius: 130, knock: 210, maxTriggers: 1 },
   },
   {
@@ -46,9 +24,9 @@ export const CARDS = [
     weight: 0.85,
     radius: 23,
     color: "#67d6ff",
-    drag: 2.8,
-    launchSpeedMul: 1.35,
-    effect: "sparkles",
+    drag: 2.8, // 快速减速，灵活
+    launchSpeedMul: 1.35, // 发射速度最快
+    effect: "sparkles", // 闪烁光点
     life: 14,
     desc: "停下后：自动射箭，优先打精英/Boss。",
     onStop: { kind: "arrows", cd: 0.5, dmg: 9, range: 420 },
@@ -61,9 +39,9 @@ export const CARDS = [
     weight: 0.72,
     radius: 21,
     color: "#a67bff",
-    drag: 2.2,
-    launchSpeedMul: 0.95,
-    effect: "glow",
+    drag: 2.2, // 中等减速
+    launchSpeedMul: 0.95, // 发射速度较慢
+    effect: "glow", // 光晕效果
     life: 13,
     desc: "停下后：法术射线，同时灼烧传送门。",
     onStop: { kind: "beam", cd: 0.8, dmg: 12, range: 520, portalDmg: 7 },
@@ -76,9 +54,9 @@ export const CARDS = [
     weight: 1.45,
     radius: 30,
     color: "#ffcc57",
-    drag: 1.5,
-    launchSpeedMul: 0.75,
-    effect: "spin",
+    drag: 1.5, // 很慢减速，惯性大
+    launchSpeedMul: 0.75, // 发射速度最慢
+    effect: "spin", // 旋转效果
     life: 16,
     desc: "更重更大：碰撞伤害更高，停下后小范围嘲讽减速。",
     onStop: { kind: "auraSlow", cd: 0.55, dmg: 6, radius: 120, slow: 0.55 },
@@ -142,19 +120,76 @@ export const CARDS = [
 
 // 奖励卡牌池
 export const REWARD_CARDS = [
+  // 角色卡奖励
   { id: "knight", type: "role", name: "棉花骑士", rarity: "common" },
   { id: "archer", type: "role", name: "糖霜弓手", rarity: "common" },
   { id: "mage", type: "role", name: "果冻法师", rarity: "common" },
   { id: "shield", type: "role", name: "软糖大盾", rarity: "uncommon" },
+  // 法术卡奖励
   { id: "ice", type: "spell", name: "冰霜结界", rarity: "common" },
   { id: "fire", type: "spell", name: "甜辣火球", rarity: "common" },
   { id: "heal", type: "spell", name: "城墙修补", rarity: "common" },
   { id: "charge", type: "spell", name: "小充能", rarity: "common" },
+  // 道具奖励
   { id: "potion_health", type: "item", name: "生命药水", rarity: "common", effect: "立即回复20点城墙生命" },
   { id: "potion_mana", type: "item", name: "法力药水", rarity: "common", effect: "立即获得5点法力" },
   { id: "bomb", type: "item", name: "炸弹", rarity: "uncommon", effect: "对范围内所有怪物造成30点伤害" },
   { id: "time_freeze", type: "item", name: "时间冻结", rarity: "rare", effect: "冻结所有怪物5秒" },
+  // 稀有角色卡
   { id: "dragon", type: "role", name: "火龙", rarity: "rare", cost: 6, desc: "强力范围伤害，飞行单位" },
   { id: "angel", type: "role", name: "天使", rarity: "rare", cost: 5, desc: "治疗城墙，净化怪物" },
   { id: "demon", type: "role", name: "恶魔", rarity: "epic", cost: 7, desc: "极高伤害，但会伤害城墙" }
 ];
+
+// 生成奖励卡牌
+export function generateRewardCards() {
+  const cards = [];
+  const rarities = { common: 0.6, uncommon: 0.25, rare: 0.12, epic: 0.03 };
+  
+  for (let i = 0; i < 4; i++) {
+    const rand = Math.random();
+    let selectedRarity = "common";
+    let cumulative = 0;
+    
+    for (const [rarity, prob] of Object.entries(rarities)) {
+      cumulative += prob;
+      if (rand <= cumulative) {
+        selectedRarity = rarity;
+        break;
+      }
+    }
+    
+    const availableCards = REWARD_CARDS.filter(card => card.rarity === selectedRarity);
+    const selectedCard = availableCards[Math.floor(Math.random() * availableCards.length)];
+    cards.push({ ...selectedCard, rewardId: i });
+  }
+  
+  return cards;
+}
+
+// 获取当前可用卡牌
+export function getAvailableCards(day) {
+  // 固定8张卡牌池，根据天数轮换
+  const baseCards = [
+    CARDS[0], // knight
+    CARDS[1], // archer  
+    CARDS[2], // mage
+    CARDS[3], // shield
+    CARDS[4], // ice
+    CARDS[5], // fire
+    CARDS[6], // heal
+    CARDS[7]  // charge
+  ];
+  
+  // 根据天数添加新卡牌
+  if (day >= 2) {
+    baseCards.push(CARDS[8]); // hellfire
+  }
+  
+  // 如果超过8张，移除最早的
+  if (baseCards.length > 8) {
+    baseCards.splice(0, baseCards.length - 8);
+  }
+  
+  return baseCards;
+}

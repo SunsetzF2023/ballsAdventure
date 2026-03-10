@@ -460,6 +460,10 @@ button.primary:active {
   font-size: 18px;
   font-weight: 900;
   margin-bottom: 4px;
+  color: var(--accent-blue);
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.2s;
 }
 
 .gacha-cost {

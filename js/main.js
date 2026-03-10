@@ -1,15 +1,16 @@
-import { WORLD } from './config.js';
+import { WORLD, SLING } from './config.js';
 import { screenToWorld } from './utils.js';
 import { gameState, loadProgress } from './gameState.js';
 import { Renderer } from './renderer.js';
-import { updateGame, handleCardLaunch, dayComplete, gameOver, setupDay } from './gameLogic.js';
-import { initializeUI, updateHUD, selectCard, showBuildOverlay, hideBuildOverlay } from './ui.js';
+import { updateGame, setupDay } from './gameLogic.js';
+import { initializeUI, updateHUD, showBuildOverlay, hideBuildOverlay } from './ui.js';
+import { InputHandler } from './input.js';
+import { CARDS, getAvailableCards } from './cards.js';
 
 // 全局变量
 let canvas, ctx, renderer;
 let view = { scale: 1, ox: 0, oy: 0, w: 0, h: 0 };
-let isDragging = false;
-let dragStartPos = null;
+let inputHandler;
 let lastFrameTime = 0;
 
 // 初始化函数
@@ -34,6 +35,10 @@ function init() {
   renderer = new Renderer(ctx, view);
   console.log('渲染器初始化完成');
   
+  // 初始化输入处理器
+  inputHandler = new InputHandler(canvas);
+  console.log('输入处理器初始化完成');
+  
   // 加载存档
   loadProgress();
   console.log('存档加载完成');
@@ -46,13 +51,12 @@ function init() {
   initializeUI();
   console.log('UI初始化完成');
   
-  // 设置输入事件
-  setupInputEvents();
-  console.log('输入事件设置完成');
-  
   // 设置UI事件
   setupUIEvents();
   console.log('UI事件设置完成');
+  
+  // 渲染初始卡牌
+  renderCards();
   
   // 开始游戏循环
   requestAnimationFrame(gameLoop);
@@ -80,46 +84,105 @@ function resize() {
   gameState.view = view;
 }
 
-// 设置输入事件
-function setupInputEvents() {
-  // 鼠标事件
-  canvas.addEventListener('mousedown', handleMouseDown);
-  canvas.addEventListener('mousemove', handleMouseMove);
-  canvas.addEventListener('mouseup', handleMouseUp);
+// 渲染卡牌
+function renderCards() {
+  const cardsEl = document.getElementById("cards");
+  if (!cardsEl) return;
   
-  // 触摸事件
-  canvas.addEventListener('touchstart', handleTouchStart);
-  canvas.addEventListener('touchmove', handleTouchMove);
-  canvas.addEventListener('touchend', handleTouchEnd);
+  cardsEl.innerHTML = "";
   
-  // 防止右键菜单
-  canvas.addEventListener('contextmenu', e => e.preventDefault());
+  // 获取当前可用的8张卡牌
+  const availableCards = getAvailableCards(gameState.day);
+  
+  // 按每行2张卡牌排列
+  const cardsPerRow = 2;
+  const rows = [];
+  
+  for (let i = 0; i < availableCards.length; i += cardsPerRow) {
+    rows.push(availableCards.slice(i, i + cardsPerRow));
+  }
+  
+  rows.forEach((row) => {
+    const rowEl = document.createElement("div");
+    rowEl.style.display = "flex";
+    rowEl.style.gap = "8px";
+    rowEl.style.marginBottom = "8px";
+    
+    row.forEach((card) => {
+      const el = document.createElement("div");
+      el.className = "card";
+      el.dataset.cardId = card.id;
+      
+      // 卡牌内容
+      el.innerHTML = `
+        <div class="card-content">
+          <div class="card-name">${card.name}</div>
+          <div class="card-cost">${card.cost}</div>
+          <div class="card-desc">${card.desc}</div>
+          ${card.type === 'role' ? '<div class="tag role">角色</div>' : '<div class="tag spell">法术</div>'}
+        </div>
+      `;
+      
+      // 点击事件
+      el.addEventListener("click", () => {
+        inputHandler.selectCard(card.id);
+        updateCardStyles();
+        updateHint();
+      });
+      
+      rowEl.appendChild(el);
+    });
+    
+    cardsEl.appendChild(rowEl);
+  });
+  
+  updateCardStyles();
+}
+
+// 更新卡牌样式
+function updateCardStyles() {
+  for (const el of document.querySelectorAll(".card")) {
+    const id = el.dataset.cardId;
+    const card = CARDS.find((c) => c.id === id);
+    el.classList.toggle("selected", id === inputHandler.selectedCardId);
+    el.classList.toggle("disabled", !!card && card.cost > gameState.mana);
+  }
+}
+
+// 更新提示信息
+function updateHint() {
+  const card = CARDS.find((c) => c.id === inputHandler.selectedCardId);
+  const hintEl = document.getElementById("hudHint");
+  if (!hintEl) return;
+  
+  if (!card) {
+    hintEl.textContent = "选择卡牌：角色卡在弹弓发射；法术卡点击场地施放。";
+    return;
+  }
+  
+  if (card.type === "role") {
+    hintEl.textContent = `在弹弓附近拖拽发射 ${card.name}。`;
+  } else {
+    hintEl.textContent = `点击场地施放 ${card.name}。`;
+  }
 }
 
 // 设置UI事件
 function setupUIEvents() {
   // 覆盖层按钮
   const overlayBtn = document.getElementById("overlayBtn");
-  overlayBtn.addEventListener('click', () => {
-    hideOverlay();
-    
-    // 根据当前状态决定下一步
-    if (gameState.rewardSystem.showReward) {
-      // 选择奖励后进入下一天
-      gameState.rewardSystem.showReward = false;
+  if (overlayBtn) {
+    overlayBtn.addEventListener('click', () => {
+      hideOverlay();
       setupDay(gameState.day);
-    } else if (gameState.wall.hp <= 0) {
-      // 游戏结束，重新开始
-      setupDay(1);
-    } else {
-      // 正常过关，进入下一天
-      setupDay(gameState.day);
-    }
-  });
+    });
+  }
   
   // 建设界面按钮
   const backToGameBtn = document.getElementById("backToGameBtn");
-  backToGameBtn.addEventListener('click', hideBuildOverlay);
+  if (backToGameBtn) {
+    backToGameBtn.addEventListener('click', hideBuildOverlay);
+  }
   
   // 键盘事件
   document.addEventListener('keydown', handleKeyDown);
@@ -140,89 +203,12 @@ function handleKeyDown(e) {
   }
 }
 
-// 鼠标事件处理
-function handleMouseDown(e) {
-  if (gameState.pausedOverlay) return;
-  
-  const rect = canvas.getBoundingClientRect();
-  const x = e.clientX - rect.left;
-  const y = e.clientY - rect.top;
-  
-  if (gameState.selectedCardId) {
-    isDragging = true;
-    dragStartPos = { x, y };
-  }
-}
-
-function handleMouseMove(e) {
-  if (!isDragging || !dragStartPos) return;
-  
-  const rect = canvas.getBoundingClientRect();
-  const x = e.clientX - rect.left;
-  const y = e.clientY - rect.top;
-  
-  // 可以在这里添加拖拽预览效果
-}
-
-function handleMouseUp(e) {
-  if (!isDragging || !dragStartPos) return;
-  
-  const rect = canvas.getBoundingClientRect();
-  const x = e.clientX - rect.left;
-  const y = e.clientY - rect.top;
-  
-  // 检查是否在弹弓附近开始拖拽
-  const worldStart = screenToWorld(dragStartPos.x, dragStartPos.y, view);
-  const slingDist = Math.hypot(worldStart.x - 360, worldStart.y - 1130); // 弹弓位置
-  
-  if (slingDist < 50) {
-    // 在弹弓附近，执行发射
-    const success = handleCardLaunch(gameState.selectedCardId, dragStartPos.x, dragStartPos.y, x, y);
-    if (success) {
-      gameState.selectedCardId = null;
-      updateHUD();
-      // 重新渲染卡牌以更新状态
-      const cardsEl = document.getElementById("cards");
-      cardsEl.innerHTML = '';
-      // 这里需要重新调用renderCards，但由于模块依赖，先简化处理
-    }
-  }
-  
-  isDragging = false;
-  dragStartPos = null;
-}
-
-// 触摸事件处理
-function handleTouchStart(e) {
-  e.preventDefault();
-  const touch = e.touches[0];
-  const mouseEvent = new MouseEvent('mousedown', {
-    clientX: touch.clientX,
-    clientY: touch.clientY
-  });
-  canvas.dispatchEvent(mouseEvent);
-}
-
-function handleTouchMove(e) {
-  e.preventDefault();
-  const touch = e.touches[0];
-  const mouseEvent = new MouseEvent('mousemove', {
-    clientX: touch.clientX,
-    clientY: touch.clientY
-  });
-  canvas.dispatchEvent(mouseEvent);
-}
-
-function handleTouchEnd(e) {
-  e.preventDefault();
-  const mouseEvent = new MouseEvent('mouseup', {});
-  canvas.dispatchEvent(mouseEvent);
-}
-
 // 覆盖层相关函数
 function hideOverlay() {
   const overlayEl = document.getElementById("overlay");
-  overlayEl.classList.add("hidden");
+  if (overlayEl) {
+    overlayEl.classList.add("hidden");
+  }
   gameState.pausedOverlay = false;
 }
 
@@ -240,10 +226,16 @@ function gameLoop(timestamp) {
     
     // 更新UI
     updateHUD();
+    updateCardStyles();
   }
   
   // 渲染游戏
   renderer.render();
+  
+  // 绘制瞄准线
+  if (inputHandler) {
+    inputHandler.drawAim(ctx);
+  }
   
   // 继续循环
   requestAnimationFrame(gameLoop);
@@ -263,7 +255,5 @@ document.addEventListener('DOMContentLoaded', () => {
 window.gameFunctions = {
   showBuildOverlay,
   hideBuildOverlay,
-  selectCard,
-  dayComplete,
-  gameOver
+  renderCards
 };
