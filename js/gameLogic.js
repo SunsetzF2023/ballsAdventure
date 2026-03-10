@@ -1,4 +1,5 @@
-import { CARDS, REWARD_CARDS, WORLD, SLING, ARENA, GAME_BALANCE } from './config.js';
+import { REWARD_CARDS, WORLD, SLING, ARENA, GAME_BALANCE } from './config.js';
+import { CARDS } from './cards.js';
 import { pick, rand, screenToWorld } from './utils.js';
 import { gameState, saveProgress, resetGameState } from './gameState.js';
 import { Role, Monster } from './entities.js';
@@ -193,12 +194,14 @@ export function setupDay(dayNum) {
   resetGameState();
   gameState.day = dayNum;
   
-  // 设置怪物生成
-  const baseMonsters = 5 + dayNum * 2;
+  // 设置怪物生成 - 确保有怪物
+  const baseMonsters = Math.max(3, 5 + dayNum * 2);
   gameState.spawn.remaining = baseMonsters;
-  gameState.spawn.eliteRemaining = Math.floor(dayNum / 3);
-  gameState.spawn.bossRemaining = Math.floor(dayNum / 5);
-  gameState.spawn.megabossRemaining = Math.floor(dayNum / 10);
+  gameState.spawn.eliteRemaining = Math.max(0, Math.floor(dayNum / 3));
+  gameState.spawn.bossRemaining = Math.max(0, Math.floor(dayNum / 5));
+  gameState.spawn.megabossRemaining = Math.max(0, Math.floor(dayNum / 10));
+  
+  console.log(`Day ${dayNum}: ${baseMonsters} monsters, ${gameState.spawn.eliteRemaining} elites, ${gameState.spawn.bossRemaining} bosses`);
   
   // 应用修正器
   if (gameState.pendingModifier) {
@@ -216,6 +219,10 @@ export function setupDay(dayNum) {
   
   // 重置最大法力值
   gameState.maxMana = GAME_BALANCE.maxMana + gameState.modifiers.maxManaBonus;
+  
+  // 立即开始生成怪物
+  gameState.spawn.time = 0;
+  gameState.spawn.nextAt = 0.5;
 }
 
 // 处理卡牌发射
