@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Slingshot Portal — Mini Prototype</title>
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <div id="app">
+      <canvas id="game" aria-label="game canvas"></canvas>
+
+      <div id="hud">
+        <div class="hud-row">
+          <div class="pill" id="hudDay">Day 1</div>
+          <div class="pill" id="hudMana">Mana 0/10</div>
+          <div class="pill" id="hudPortal">Portal 100/100</div>
+        </div>
+        <div class="hud-row bottom">
+          <div class="pill" id="hudWall">Wall 50/50</div>
+          <div class="hint" id="hudHint">选择一张角色卡 → 在弹弓上拖拽并松手发射</div>
+        </div>
+      </div>
+
+      <div id="cards" aria-label="cards bar"></div>
+
+      <div id="overlay" class="hidden" role="dialog" aria-modal="true">
+        <div class="panel">
+          <div class="title" id="overlayTitle">Day Clear</div>
+          <div class="desc" id="overlayDesc"></div>
+          <button id="overlayBtn" class="primary">进入下一天</button>
+        </div>
+      </div>
+
+      <div id="buildOverlay" class="hidden" role="dialog" aria-modal="true">
+        <div class="panel build-panel">
+          <div class="title">建设基地</div>
+          <div class="build-stats">
+            <div class="stat-item">
+              <span class="stat-label">当前存档:</span>
+              <span class="stat-value" id="currentSaveName">默认存档</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">金币:</span>
+              <span class="stat-value" id="buildCoins">0</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">最高天数:</span>
+              <span class="stat-value" id="buildBestDay">1</span>
+            </div>
+          </div>
+          
+          <div class="save-management">
+            <div class="section-title">存档管理</div>
+            <div class="save-slots" id="saveSlots">
+              <!-- 动态生成存档槽位 -->
+            </div>
+            <div class="save-actions">
+              <input type="text" id="newSaveName" placeholder="输入存档名称" maxlength="20">
+              <button id="createNewSaveBtn" class="secondary-btn">新建存档</button>
+            </div>
+          </div>
+          
+          <div class="build-actions">
+            <button id="gachaBtn" class="gacha-btn">
+              <div class="gacha-title">十连抽</div>
+              <div class="gacha-cost">消耗 100 金币</div>
+            </button>
+            <button id="backToGameBtn" class="secondary-btn">返回游戏</button>
+          </div>
+          <div id="gachaResults" class="gacha-results hidden"></div>
+        </div>
+      </div>
+    </div>
+
+    <script defer src="./game.js"></script>
+  </body>
+</html>
