@@ -1,4 +1,4 @@
-import { CARDS } from './config.js';
+import { CARDS } from './cards.js';
 import { gameState } from './gameState.js';
 import { performGacha, showOverlay, hideOverlay } from './gameLogic.js';
 
@@ -23,7 +23,6 @@ const elements = {
   saveSlotsEl: document.getElementById("saveSlots"),
   newSaveNameEl: document.getElementById("newSaveName"),
   createNewSaveBtn: document.getElementById("createNewSaveBtn"),
-  gachaBtn: document.getElementById("gachaBtn"),
   backToGameBtn: document.getElementById("backToGameBtn"),
   gachaResultsEl: document.getElementById("gachaResults"),
   
@@ -251,13 +250,6 @@ export function initializeUI() {
   
   // 建设界面按钮
   elements.backToGameBtn.addEventListener('click', hideBuildOverlay);
-  
-  elements.gachaBtn.addEventListener('click', () => {
-    const results = performGacha();
-    if (results) {
-      showGachaResults(results);
-    }
-  });
   
   // 游戏界面十连抽按钮
   if (elements.gameGachaBtn) {
