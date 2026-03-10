@@ -64,7 +64,7 @@ function init() {
   console.log('游戏初始化完成');
 }
 
-// 调整画布大小 - 确保场地正确居中
+// 调整画布大小 - 强制场地居中
 function resize() {
   const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
   const w = Math.floor(window.innerWidth);
@@ -77,14 +77,18 @@ function resize() {
   view.w = w;
   view.h = h;
   
-  // 场地居中缩放，确保完全可见
+  // 计算合适的缩放比例，确保场地完全可见
   const scaleX = w / WORLD.w;
   const scaleY = h / WORLD.h;
-  view.scale = Math.min(scaleX, scaleY, 1.5); // 限制最大缩放
+  view.scale = Math.min(scaleX, scaleY, 2.0); // 允许更大缩放
   
-  // 场地居中
-  view.ox = (w - WORLD.w * view.scale) / 2;
-  view.oy = (h - WORLD.h * view.scale) / 2;
+  // 强制场地居中 - 这是关键
+  const scaledWorldWidth = WORLD.w * view.scale;
+  const scaledWorldHeight = WORLD.h * view.scale;
+  view.ox = (w - scaledWorldWidth) / 2;
+  view.oy = (h - scaledWorldHeight) / 2;
+  
+  console.log(`场地居中: 世界${WORLD.w}x${WORLD.h}, 缩放${view.scale}, 偏移${view.ox},${view.oy}`);
   
   // 更新gameState中的view
   gameState.view = view;
