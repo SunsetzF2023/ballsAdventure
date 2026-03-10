@@ -1,14 +1,14 @@
-// 游戏核心配置 - 大幅缩小场地，真正居中
-export const WORLD = { w: 600, h: 800 }; // 大幅缩小
-export const WALL_H = 80; // 减少墙壁高度
-export const SLING = { x: WORLD.w / 2, y: WORLD.h - WALL_H - 30, r: 35 }; // 调整弹弓位置
+// 游戏核心配置 - 彻底重新设计布局
+export const WORLD = { w: 400, h: 600 }; // 大幅缩小场地
+export const WALL_H = 60; // 更小的墙壁
+export const SLING = { x: WORLD.w / 2, y: WORLD.h - WALL_H - 20, r: 25 }; // 更小的弹弓
 export const ARENA = {
-  l: 150,  // 左边界，给左侧卡牌留足够空间
-  r: WORLD.w - 150,  // 右边界，给右侧UI留空间
-  t: 120,  // 上边界
-  b: WORLD.h - WALL_H - 100,  // 下边界
+  l: 50,  // 场地左边界
+  r: WORLD.w - 50,  // 场地右边界
+  t: 80,  // 场地上边界
+  b: WORLD.h - WALL_H - 80,  // 场地下边界
 };
-export const PORTAL = { x: WORLD.w / 2, y: ARENA.t - 50, r: 50 }; // 传送门居中
+export const PORTAL = { x: WORLD.w / 2, y: ARENA.t - 40, r: 35 }; // 更小的传送门
 
 // 游戏平衡参数
 export const GAME_BALANCE = {
