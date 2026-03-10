@@ -26,7 +26,7 @@ export class InputHandler {
     const view = gameState.view;
     return {
       x: (px - view.ox) / view.scale,
-      y: (py - view.oy) / view.scale,
+      y: (py - view.oy) / view.scale
     };
   }
 
@@ -34,28 +34,52 @@ export class InputHandler {
     return x >= ARENA.l && x <= ARENA.r && y >= ARENA.t && y <= ARENA.b;
   }
 
-  handlePointerDown(ev) {
-    const p = this.screenToWorld(ev.clientX, ev.clientY);
-    const card = CARDS.find((c) => c.id === this.selectedCardId);
+  createRoleAtSling(card) {
+    if (gameState.mana < card.cost) {
+      this.flashHint("法力不足！");
+      return false;
+    }
     
-    if (!card) return;
+    // 在弹弓处创建静止的角色
+    const role = new Role(card, SLING.x, SLING.y, 0, 0);
+    role.stopped = true; // 角色静止在弹弓处
+    gameState.roles.push(role);
+    this.lastCreatedRoleId = role;
+    
+    // 消耗法力
+    gameState.mana -= card.cost;
+    
+    return true;
+  }
 
-    if (card.type === "role") {
-      // 检查是否在弹弓区域附近
-      const dx = p.x - SLING.x;
-      const dy = p.y - SLING.y;
-      const dist = Math.hypot(dx, dy);
+  handlePointerDown(ev) {
+    const rect = this.canvas.getBoundingClientRect();
+    const px = ev.clientX - rect.left;
+    const py = ev.clientY - rect.top;
+    const worldPos = this.screenToWorld(px, py);
+    
+    if (this.selectedCardId) {
+      const card = CARDS.find((c) => c.id === this.selectedCardId);
+      if (!card) return;
       
-      if (dist <= SLING.r * 2) {
-        // 开始瞄准
-        this.aiming.active = true;
-        this.aiming.start = { x: SLING.x, y: SLING.y };
-        this.aiming.pos = p;
-        this.canvas.setPointerCapture(ev.pointerId);
+      if (card.type === "role") {
+        // 检查是否点击了弹弓区域
+        const distToSling = Math.hypot(worldPos.x - SLING.x, worldPos.y - SLING.y);
+        if (distToSling <= SLING.r * 2) {
+          // 在弹弓处创建角色
+          if (this.createRoleAtSling(card)) {
+            this.aiming = {
+              active: true,
+              start: { x: SLING.x, y: SLING.y },
+              pos: { x: worldPos.x, y: worldPos.y },
+              roleId: this.lastCreatedRoleId
+            };
+          }
+        }
+      } else if (card.type === "spell") {
+        // 法术卡直接施放
+        this.handleSpellCast(card, worldPos);
       }
-    } else if (card.type === "spell") {
-      // 法术卡处理
-      this.handleSpellCast(card, p);
     }
   }
 
@@ -71,7 +95,7 @@ export class InputHandler {
     
     this.aiming.active = false;
     const card = CARDS.find((c) => c.id === this.selectedCardId);
-    if (!card) return;
+    if (!card || !this.aiming.roleId) return;
     
     // 计算发射速度
     const dx = this.aiming.start.x - this.aiming.pos.x;
@@ -84,15 +108,22 @@ export class InputHandler {
       const vx = Math.cos(angle) * speed;
       const vy = Math.sin(angle) * speed;
       
-      // 创建角色
-      const role = new Role(card, SLING.x, SLING.y, vx, vy);
-      gameState.roles.push(role);
-      
-      // 消耗法力
-      gameState.mana = Math.max(0, gameState.mana - card.cost);
+      // 发射已创建的角色
+      const role = this.aiming.roleId;
+      role.vx = vx;
+      role.vy = vy;
+      role.stopped = false; // 开始移动
       
       // 清除选择
       this.selectedCardId = null;
+    } else {
+      // 取消发射，移除角色
+      const index = gameState.roles.indexOf(this.aiming.roleId);
+      if (index > -1) {
+        gameState.roles.splice(index, 1);
+        // 退还法力
+        gameState.mana += card.cost;
+      }
     }
   }
 
