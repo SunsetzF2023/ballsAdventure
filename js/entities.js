@@ -34,6 +34,22 @@ export class Role {
       this.vy *= drag;
       this.x += this.vx * dt;
       this.y += this.vy * dt;
+      
+      // 处理尾迹效果
+      if (this.card.effect === "trail") {
+        this.lastTrailTime += dt;
+        if (this.lastTrailTime >= 0.03) {
+          this.trail.push({ x: this.x, y: this.y, t: 0, dur: 0.35 });
+          this.lastTrailTime = 0;
+          if (this.trail.length > 12) this.trail.shift();
+        }
+      }
+      
+      // 处理旋转效果
+      if (this.card.effect === "spin") {
+        const sp = Math.hypot(this.vx, this.vy);
+        this.rotation += sp * 0.08 * dt;
+      }
     }
     this.life -= dt;
     if (this.life <= 0) this.dead = true;
@@ -44,14 +60,54 @@ export class Role {
     ctx.translate(this.x, this.y);
     ctx.rotate(this.rotation);
 
-    // 绘制角色
-    const grd = ctx.createRadialGradient(0, 0, 0, 0, 0, this.r);
-    grd.addColorStop(0, this.card.color);
-    grd.addColorStop(1, this.card.color + "88");
+    // 寿命可视化
+    const lifeP = Math.max(0, Math.min(1, this.life / Math.max(0.001, this.maxLife)));
+    const fade = lifeP < 0.25 ? (0.25 + lifeP * 3.0) : 1;
+    ctx.globalAlpha = fade;
+
+    // 光晕效果（法师）
+    if (this.card.effect === "glow") {
+      const glowGrd = ctx.createRadialGradient(0, 0, 0, 0, 0, this.r * 1.8);
+      glowGrd.addColorStop(0, this.card.color + "40");
+      glowGrd.addColorStop(0.4, this.card.color + "20");
+      glowGrd.addColorStop(1, this.card.color + "00");
+      ctx.fillStyle = glowGrd;
+      ctx.beginPath();
+      ctx.arc(0, 0, this.r * 1.8, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    
+    // 尾迹效果（骑士）
+    if (this.card.effect === "trail" && this.trail.length > 0) {
+      for (let i = 0; i < this.trail.length; i++) {
+        const p = this.trail[i];
+        const alpha = (1 - p.t / p.dur) * 0.4;
+        const r = this.r * (0.3 + 0.7 * (1 - p.t / p.dur));
+        ctx.fillStyle = this.card.color + Math.floor(alpha * 255).toString(16).padStart(2, '0');
+        ctx.beginPath();
+        ctx.arc(p.x - this.x, p.y - this.y, r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+    
+    // 阴影
+    ctx.fillStyle = "rgba(0,0,0,0.12)";
+    ctx.beginPath();
+    ctx.ellipse(6, this.r * 0.62, this.r * 0.92, this.r * 0.42, 0, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // 主体
+    const grd = ctx.createRadialGradient(-this.r * 0.35, -this.r * 0.35, 6, 0, 0, this.r);
+    grd.addColorStop(0, "#ffffff");
+    grd.addColorStop(0.2, this.card.color);
+    grd.addColorStop(1, this.card.color + "cc");
     ctx.fillStyle = grd;
+    ctx.strokeStyle = "rgba(0,0,0,0.12)";
+    ctx.lineWidth = 3;
     ctx.beginPath();
     ctx.arc(0, 0, this.r, 0, Math.PI * 2);
     ctx.fill();
+    ctx.stroke();
 
     ctx.restore();
   }

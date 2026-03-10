@@ -164,7 +164,7 @@ export class InputHandler {
     this.selectedCardId = cardId;
   }
 
-  // 绘制瞄准辅助线
+  // 绘制瞄准辅助线 - 俯视视角直线轨迹
   drawAim(ctx) {
     if (!this.aiming.active) return;
     
@@ -181,31 +181,57 @@ export class InputHandler {
       ctx.lineWidth = 2;
       ctx.setLineDash([8, 4]);
       
-      // 绘制轨迹预判线
-      ctx.beginPath();
-      ctx.moveTo(this.aiming.start.x, this.aiming.start.y);
-      
-      // 模抛物线轨迹
-      const angle = Math.atan2(-dy, -dx);
+      // 计算发射方向和速度
+      const angle = Math.atan2(-dy, -dx); // 反向，因为拖拽方向与发射方向相反
       const speed = pull * 4 * (card.launchSpeedMul || 1);
       const vx = Math.cos(angle) * speed;
       const vy = Math.sin(angle) * speed;
       
+      // 绘制直线轨迹预判
+      ctx.beginPath();
+      ctx.moveTo(this.aiming.start.x, this.aiming.start.y);
+      
+      // 模拟弹道轨迹（考虑减速）
       let px = this.aiming.start.x;
       let py = this.aiming.start.y;
       let pvx = vx;
       let pvy = vy;
+      const drag = Math.exp(-card.drag * 0.016); // 使用卡牌的减速系数
       
-      for (let i = 0; i < 20; i++) {
-        pvy += 300 * 0.016; // 重力
+      for (let i = 0; i < 30; i++) {
         px += pvx * 0.016;
         py += pvy * 0.016;
         ctx.lineTo(px, py);
         
-        if (py > WORLD.h - 100) break; // 超出屏幕底部
+        // 应用减速
+        pvx *= drag;
+        pvy *= drag;
+        
+        // 绘制轨迹点
+        if (i % 3 === 0) {
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+          ctx.beginPath();
+          ctx.arc(px, py, 3, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        
+        // 检查是否超出场地或速度太小
+        if (px < 0 || px > WORLD.w || py < 0 || py > WORLD.h || Math.hypot(pvx, pvy) < 10) {
+          break;
+        }
       }
       
       ctx.stroke();
+      
+      // 绘制拖拽线
+      ctx.strokeStyle = 'rgba(255, 200, 100, 0.8)';
+      ctx.lineWidth = 3;
+      ctx.setLineDash([]);
+      ctx.beginPath();
+      ctx.moveTo(this.aiming.start.x, this.aiming.start.y);
+      ctx.lineTo(this.aiming.pos.x, this.aiming.pos.y);
+      ctx.stroke();
+      
       ctx.restore();
     }
   }
