@@ -1,5 +1,5 @@
 import { ARENA, PORTAL, WORLD, WALL_H } from './config.js';
-import { rand, clamp } from './utils.js';
+import { rand, clamp, norm } from './utils.js';
 import { gameState } from './gameState.js';
 
 // 角色类
@@ -25,15 +25,6 @@ export class Role {
     this.maxLife = card.life ?? 14;
     this.life = this.maxLife;
     this.dead = false;
-    this.stopTriggers = 0;
-    this.burnTarget = null;
-    this.burnDamage = 0;
-    this.burnStartTime = 0;
-    this.lastBurnTarget = null;
-  }
-
-  speed() {
-    return Math.hypot(this.vx, this.vy);
   }
 
   update(dt) {
@@ -43,436 +34,175 @@ export class Role {
       this.vy *= drag;
       this.x += this.vx * dt;
       this.y += this.vy * dt;
-      
-      if (this.card.effect === "spin") {
-        const sp = this.speed();
-        this.rotation += sp * 0.08 * dt;
-      }
-      
-      if (this.card.effect === "trail") {
-        this.lastTrailTime += dt;
-        if (this.lastTrailTime >= 0.03) {
-          this.trail.push({ x: this.x, y: this.y, t: 0, dur: 0.35 });
-          this.lastTrailTime = 0;
-          if (this.trail.length > 12) this.trail.shift();
-        }
-      }
-      
-      if (this.card.effect === "sparkles" && Math.random() < 0.25) {
-        gameState.particles.push({
-          x: this.x + rand(-this.r * 0.6, this.r * 0.6),
-          y: this.y + rand(-this.r * 0.6, this.r * 0.6),
-          vx: rand(-40, 40),
-          vy: rand(-40, 40),
-          r: rand(2, 4),
-          t: 0,
-          dur: rand(0.2, 0.4),
-          color: this.card.color,
-        });
-      }
-      
-      if (this.card.effect === "burn" && Math.random() < 0.3) {
-        gameState.particles.push({
-          x: this.x + rand(-this.r * 0.8, this.r * 0.8),
-          y: this.y + rand(-this.r * 0.8, this.r * 0.8),
-          vx: rand(-30, 30),
-          vy: rand(-50, -10),
-          r: rand(3, 5),
-          t: 0,
-          dur: rand(0.4, 0.7),
-          color: "#ff6b35",
-        });
-      }
-      
-      this._collideArena();
-      this._collidePortal();
-
-      const sp = this.speed();
-      if (sp < 22 && gameState.now - this.lastColl > 0.12) {
-        this.stopped = true;
-        this.vx = 0;
-        this.vy = 0;
-        this.stopTimer = 0;
-        this.effectCd = rand(0.05, 0.18);
-        this._puff(this.x, this.y, this.card.color, 10);
-      }
-    } else {
-      this.stopTimer += dt;
-      this.effectCd -= dt;
-      if (this.effectCd <= 0) {
-        const cfg = this.card.onStop;
-        if (cfg) {
-          if (cfg.maxTriggers && this.stopTriggers >= cfg.maxTriggers) {
-            this.effectCd = 9999;
-          } else {
-            this._emitStoppedEffect();
-            this.stopTriggers++;
-            this.effectCd = cfg.cd ?? 999;
-          }
-        } else {
-          this.effectCd = 999;
-        }
-      }
     }
-    
-    if (this.card.effect === "trail") {
-      for (const p of this.trail) p.t += dt;
-      this.trail = this.trail.filter((p) => p.t < p.dur);
-    }
-
     this.life -= dt;
-    if (this.life <= 0) {
-      this.dead = true;
-    }
+    if (this.life <= 0) this.dead = true;
   }
 
-  _collideArena() {
-    if (this.x - this.r < ARENA.l) {
-      this.x = ARENA.l + this.r;
-      this.vx = Math.abs(this.vx) * this.bounce;
-      this._bump();
-    } else if (this.x + this.r > ARENA.r) {
-      this.x = ARENA.r - this.r;
-      this.vx = -Math.abs(this.vx) * this.bounce;
-      this._bump();
-    }
-    if (this.y - this.r < ARENA.t) {
-      this.y = ARENA.t + this.r;
-      this.vy = Math.abs(this.vy) * this.bounce;
-      this._bump();
-    } else if (this.y + this.r > ARENA.b) {
-      this.y = ARENA.b - this.r;
-      this.vy = -Math.abs(this.vy) * this.bounce;
-      this._bump();
-    }
-  }
+  draw(ctx) {
+    ctx.save();
+    ctx.translate(this.x, this.y);
+    ctx.rotate(this.rotation);
 
-  _collidePortal() {
-    const dx = this.x - PORTAL.x;
-    const dy = this.y - PORTAL.y;
-    const d = Math.hypot(dx, dy);
-    const minD = this.r + PORTAL.r;
-    if (d < minD) {
-      const n = { x: dx / d, y: dy / d };
-      const overlap = minD - d;
-      this.x += n.x * overlap;
-      this.y += n.y * overlap;
-      
-      const vn = this.vx * n.x + this.vy * n.y;
-      this.vx -= (1.8 * vn) * n.x;
-      this.vy -= (1.8 * vn) * n.y;
-      this.vx *= this.bounce;
-      this.vy *= this.bounce;
-      this._bump();
+    // 绘制角色
+    const grd = ctx.createRadialGradient(0, 0, 0, 0, 0, this.r);
+    grd.addColorStop(0, this.card.color);
+    grd.addColorStop(1, this.card.color + "88");
+    ctx.fillStyle = grd;
+    ctx.beginPath();
+    ctx.arc(0, 0, this.r, 0, Math.PI * 2);
+    ctx.fill();
 
-      const hitDmg = (this.m * 9 + Math.min(70, this.speed()) * 0.18) * gameState.modifiers.roleCollisionMul;
-      this._dealPortal(hitDmg);
-      this._sparkle(PORTAL.x, PORTAL.y + PORTAL.r * 0.15, "#ffd1ef", 14);
-    }
-  }
-
-  _bump() {
-    this.lastColl = gameState.now;
-    this._puff(this.x, this.y, "rgba(0,0,0,0.18)", 6);
-  }
-
-  _emitStoppedEffect() {
-    const eff = this.card.onStop;
-    if (!eff) return;
-    
-    if (eff.kind === "shockwave") {
-      gameState.effects.push({
-        kind: "ring",
-        x: this.x,
-        y: this.y,
-        t: 0,
-        dur: 0.25,
-        color: this.card.color,
-        r0: 10,
-        r1: eff.radius,
-      });
-      this._hitMonstersInRadius(this.x, this.y, eff.radius, eff.dmg, eff.knock);
-    } else if (eff.kind === "arrows") {
-      const target = this._findBestMonsterTarget(this.x, this.y, eff.range);
-      if (target) {
-        gameState.effects.push({
-          kind: "line",
-          x0: this.x,
-          y0: this.y,
-          x1: target.x,
-          y1: target.y,
-          t: 0,
-          dur: 0.12,
-          color: "rgba(80,180,255,0.95)",
-        });
-        target.takeDamage(eff.dmg);
-        this._showDamageNumber(target.x, target.y, eff.dmg, "normal");
-        this._sparkle(target.x, target.y, "#b8f2ff", 8);
-      }
-    } else if (eff.kind === "beam") {
-      const target = this._findBestMonsterTarget(this.x, this.y, eff.range);
-      const tx = target ? target.x : PORTAL.x;
-      const ty = target ? target.y : PORTAL.y + PORTAL.r * 0.15;
-      gameState.effects.push({
-        kind: "line",
-        x0: this.x,
-        y0: this.y,
-        x1: tx,
-        y1: ty,
-        t: 0,
-        dur: 0.14,
-        color: "rgba(165,120,255,0.95)",
-      });
-      if (target) {
-        target.takeDamage(eff.dmg);
-        this._showDamageNumber(tx, ty, eff.dmg, "normal");
-        this._sparkle(tx, ty, "#ead7ff", 10);
-      } else {
-        this._dealPortal(eff.portalDmg);
-      }
-    } else if (eff.kind === "hellfireBeam") {
-      const target = this._findBestMonsterTarget(this.x, this.y, 520);
-      
-      if (target) {
-        if (this.lastBurnTarget !== target) {
-          this.burnTarget = target;
-          this.burnStartTime = gameState.now;
-          this.burnDamage = 0;
-          this.lastBurnTarget = target;
-        }
-        
-        const burnTime = gameState.now - this.burnStartTime;
-        const rampProgress = Math.min(burnTime / eff.rampTime, 1.0);
-        const damageMul = 1.0 + (eff.maxDmgMul - 1.0) * rampProgress;
-        const finalDamage = eff.baseDmg * damageMul;
-        
-        target.takeDamage(finalDamage);
-        this._showDamageNumber(target.x, target.y, finalDamage, "burn");
-        
-        gameState.effects.push({
-          kind: "line",
-          x0: this.x,
-          y0: this.y,
-          x1: target.x,
-          y1: target.y,
-          t: 0,
-          dur: 0.16,
-          color: `rgba(255, 107, 53, ${0.6 + rampProgress * 0.4})`,
-        });
-        
-        this._sparkle(target.x, target.y, "#ff6b35", 12);
-        
-        if (damageMul > 2.0) {
-          for (let i = 0; i < 3; i++) {
-            gameState.particles.push({
-              x: target.x + rand(-20, 20),
-              y: target.y + rand(-20, 20),
-              vx: rand(-60, 60),
-              vy: rand(-80, -20),
-              r: rand(2, 4),
-              t: 0,
-              dur: rand(0.3, 0.6),
-              color: "#ff6b35",
-            });
-          }
-        }
-      } else {
-        this.lastBurnTarget = null;
-        this.burnDamage = 0;
-      }
-    } else if (eff.kind === "auraSlow") {
-      gameState.effects.push({
-        kind: "pulse",
-        x: this.x,
-        y: this.y,
-        t: 0,
-        dur: 0.20,
-        color: "rgba(255,210,90,0.95)",
-        r: eff.radius,
-      });
-      for (const m of gameState.monsters) {
-        const d = Math.hypot(m.x - this.x, m.y - this.y);
-        if (d <= eff.radius + m.r) {
-          m.takeDamage(eff.dmg);
-          this._showDamageNumber(m.x, m.y, eff.dmg, "normal");
-          m.slowTimer = Math.max(m.slowTimer, 0.55);
-          m.slowMul = Math.min(m.slowMul, eff.slow);
-        }
-      }
-    }
-  }
-
-  // 辅助函数
-  _puff(x, y, color, count) {
-    for (let i = 0; i < count; i++) {
-      gameState.particles.push({
-        x: x + rand(-10, 10),
-        y: y + rand(-10, 10),
-        vx: rand(-30, 30),
-        vy: rand(-30, 30),
-        r: rand(3, 6),
-        t: 0,
-        dur: rand(0.2, 0.4),
-        color: color,
-      });
-    }
-  }
-
-  _sparkle(x, y, color, count) {
-    for (let i = 0; i < count; i++) {
-      gameState.particles.push({
-        x: x + rand(-15, 15),
-        y: y + rand(-15, 15),
-        vx: rand(-60, 60),
-        vy: rand(-60, 60),
-        r: rand(2, 4),
-        t: 0,
-        dur: rand(0.3, 0.6),
-        color: color,
-      });
-    }
-  }
-
-  _showDamageNumber(x, y, damage, type = "normal") {
-    const colors = {
-      normal: "#ff4444",
-      crit: "#ff8800",
-      heal: "#44ff44",
-      burn: "#ff6b35"
-    };
-    
-    gameState.damageNumbers.push({
-      x: x,
-      y: y,
-      damage: Math.round(damage),
-      color: colors[type] || colors.normal,
-      t: 0,
-      dur: 1.5,
-      vy: -60
-    });
-  }
-
-  _dealPortal(damage) {
-    gameState.portal.hp = Math.max(0, gameState.portal.hp - damage);
-  }
-
-  _findBestMonsterTarget(x, y, range) {
-    let best = null;
-    let bestScore = -1;
-    
-    for (const monster of gameState.monsters) {
-      const d = Math.hypot(monster.x - x, monster.y - y);
-      if (d <= range) {
-        let score = 1;
-        if (monster.elite) score *= 3;
-        if (monster.boss) score *= 5;
-        score *= (1 - d / range);
-        
-        if (score > bestScore) {
-          bestScore = score;
-          best = monster;
-        }
-      }
-    }
-    
-    return best;
-  }
-
-  _hitMonstersInRadius(x, y, radius, damage, knock) {
-    for (const monster of gameState.monsters) {
-      const d = Math.hypot(monster.x - x, monster.y - y);
-      if (d <= radius + monster.r) {
-        monster.takeDamage(damage);
-        this._showDamageNumber(monster.x, monster.y, damage, "normal");
-        
-        if (knock > 0) {
-          const angle = Math.atan2(monster.y - y, monster.x - x);
-          monster.vx += Math.cos(angle) * knock;
-          monster.vy += Math.sin(angle) * knock;
-        }
-      }
-    }
+    ctx.restore();
   }
 }
 
 // 怪物类
 export class Monster {
-  constructor(type = 'normal') {
-    this.type = type;
-    this.elite = type === 'elite';
-    this.boss = type === 'boss';
-    this.megaboss = type === 'megaboss';
+  constructor(kind, x, y, dayMul) {
+    this.kind = kind;
     
-    if (this.megaboss) {
-      this.r = 45;
-      this.maxHp = 500;
-      this.speed = 25;
-      this.dmg = 25;
-      this.color = '#8b0000';
-    } else if (this.boss) {
-      this.r = 35;
-      this.maxHp = 200;
-      this.speed = 35;
-      this.dmg = 15;
-      this.color = '#dc143c';
-    } else if (this.elite) {
-      this.r = 28;
-      this.maxHp = 60;
-      this.speed = 45;
-      this.dmg = 8;
-      this.color = '#ff8c00';
-    } else {
-      this.r = 20;
-      this.maxHp = 20;
-      this.speed = 60;
-      this.dmg = 3;
-      this.color = '#696969';
+    // 不同怪物类型的基础属性
+    let baseHp = 22, hpMul = 1, radius = 16, baseSpeed = 86, color = "#7be27a";
+    
+    if (kind === "boss") {
+      baseHp = 180; hpMul = 1.8; radius = 34; baseSpeed = 72; color = "#ff4b4b";
+    } else if (kind === "elite") {
+      baseHp = 55; hpMul = 1.15; radius = 22; baseSpeed = 78; color = "#ff9a3c";
+    } else if (kind === "ghost") {
+      baseHp = 26; hpMul = 1.0; radius = 18; baseSpeed = 110; color = "#c6a4ff";
+    } else if (kind === "hunter") {
+      baseHp = 40; hpMul = 1.1; radius = 20; baseSpeed = 95; color = "#ffb447";
+    } else if (kind === "shooter") {
+      baseHp = 35; hpMul = 1.0; radius = 18; baseSpeed = 70; color = "#7fd5ff";
     }
-    
-    this.hp = this.maxHp;
-    this.x = PORTAL.x + rand(-30, 30);
-    this.y = PORTAL.y + PORTAL.r + 20;
-    this.vx = 0;
-    this.vy = this.speed * gameState.modifiers.monsterSpeedMul;
-    this.slowTimer = 0;
-    this.slowMul = 1;
-    this.dead = false;
-  }
 
-  takeDamage(damage) {
-    this.hp -= damage;
-    if (this.hp <= 0) {
-      this.dead = true;
-      gameState.gameProgress.totalKills++;
-    }
+    this.maxHp = Math.round(baseHp * (1 + dayMul * 0.10) * hpMul);
+    this.hp = this.maxHp;
+    this.r = radius;
+    this.x = x;
+    this.y = y;
+    this.vx = rand(-22, 22);
+    this.vy = 0;
+    this.baseSpeed = baseSpeed * (1 + dayMul * 0.03);
+    this.color = color;
+    this.stopped = false;
+    this.shootCd = (kind === "ghost" || kind === "hunter") ? 0 : rand(1.5, 2.5);
   }
 
   update(dt) {
-    // 减速效果
-    let speedMul = this.slowMul;
-    if (this.slowTimer > 0) {
-      this.slowTimer -= dt;
-      if (this.slowTimer <= 0) {
-        this.slowMul = 1;
+    if (this.kind === "ghost") {
+      // 幽灵：直接冲向城墙
+      this.vy = this.baseSpeed;
+      this.y += this.vy * dt;
+      this.x += this.vx * dt;
+    } else if (!this.stopped) {
+      // 移动到场地中下部
+      const targetY = ARENA.b - rand(60, 120);
+      const dy = targetY - this.y;
+      if (Math.abs(dy) > 8) {
+        this.vy = Math.sign(dy) * Math.min(this.baseSpeed, Math.abs(dy) * 3);
+        this.y += this.vy * dt;
+      } else {
+        this.stopped = true;
+      }
+      this.vx += rand(-12, 12) * dt;
+      this.vx = clamp(this.vx, -40, 40);
+      this.x += this.vx * dt;
+    } else {
+      // 已停下：攻击
+      this.vx *= 0.95;
+      this.x += this.vx * dt;
+      this.shootCd -= dt;
+      if (this.shootCd <= 0) {
+        // 攻击城墙
+        this.shootCd = rand(1.2, 2.5);
       }
     }
+  }
 
-    this.x += this.vx * dt * speedMul;
-    this.y += this.vy * dt * speedMul;
+  draw(ctx) {
+    ctx.save();
+    ctx.translate(this.x, this.y);
 
-    // 边界碰撞
-    if (this.x - this.r < ARENA.l) {
-      this.x = ARENA.l + this.r;
-      this.vx = Math.abs(this.vx);
-    } else if (this.x + this.r > ARENA.r) {
-      this.x = ARENA.r - this.r;
-      this.vx = -Math.abs(this.vx);
+    // 绘制怪物阴影
+    ctx.fillStyle = "rgba(0,0,0,0.11)";
+    ctx.beginPath();
+    ctx.ellipse(4, this.r * 0.62, this.r * 0.95, this.r * 0.45, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 绘制怪物主体
+    const grd = ctx.createRadialGradient(-this.r * 0.25, -this.r * 0.35, 6, 0, 0, this.r);
+    grd.addColorStop(0, "#ffffff");
+    grd.addColorStop(0.18, this.color);
+    grd.addColorStop(1, this.color + "cc");
+    ctx.fillStyle = grd;
+    ctx.strokeStyle = "rgba(0,0,0,0.12)";
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(0, 0, this.r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+
+    // 特殊装饰
+    if (this.kind === "ghost") {
+      // 幽灵光环
+      ctx.globalAlpha = 0.3;
+      const aura = ctx.createRadialGradient(0, 0, this.r * 0.25, 0, 0, this.r * 1.8);
+      aura.addColorStop(0, this.color + "44");
+      aura.addColorStop(1, this.color + "00");
+      ctx.fillStyle = aura;
+      ctx.beginPath();
+      ctx.arc(0, 0, this.r * 1.8, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+    } else if (this.kind === "hunter") {
+      // 猎人尖角
+      ctx.fillStyle = "rgba(255,255,255,0.9)";
+      ctx.beginPath();
+      ctx.moveTo(-this.r * 0.55, -this.r * 0.55);
+      ctx.lineTo(-this.r * 0.85, -this.r * 0.95);
+      ctx.lineTo(-this.r * 0.30, -this.r * 0.78);
+      ctx.closePath();
+      ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(this.r * 0.55, -this.r * 0.55);
+      ctx.lineTo(this.r * 0.85, -this.r * 0.95);
+      ctx.lineTo(this.r * 0.30, -this.r * 0.78);
+      ctx.closePath();
+      ctx.fill();
+    } else if (this.kind === "shooter") {
+      // 射手炮塔
+      ctx.fillStyle = "rgba(255,255,255,0.88)";
+      ctx.beginPath();
+      ctx.roundRect(-this.r * 0.45, -this.r * 1.05, this.r * 0.9, this.r * 0.55, 8);
+      ctx.fill();
+    } else {
+      // 默认角
+      ctx.fillStyle = "rgba(255,255,255,0.9)";
+      ctx.beginPath();
+      ctx.roundRect(-this.r * 0.65, -this.r * 0.95, this.r * 0.35, this.r * 0.35, 6);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.roundRect(this.r * 0.30, -this.r * 0.95, this.r * 0.35, this.r * 0.35, 6);
+      ctx.fill();
     }
 
-    // 检查是否到达城墙
-    if (this.y + this.r >= WORLD.h - WALL_H) {
-      this.dead = true;
-      gameState.wall.hp = Math.max(0, gameState.wall.hp - this.dmg);
+    // 绘制血条
+    if (this.hp < this.maxHp) {
+      const barW = this.r * 2;
+      const barH = 6;
+      const barY = -this.r - 15;
+      const hpP = this.hp / this.maxHp;
+      
+      ctx.fillStyle = "rgba(0,0,0,0.5)";
+      ctx.fillRect(-barW/2, barY, barW, barH);
+      
+      const barColor = hpP > 0.6 ? "#56d364" : hpP > 0.3 ? "#f0b429" : "#ff4b4b";
+      ctx.fillStyle = barColor;
+      ctx.fillRect(-barW/2, barY, barW * hpP, barH);
     }
+
+    ctx.restore();
   }
 }

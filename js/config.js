@@ -3,10 +3,10 @@ export const WORLD = { w: 720, h: 1280 };
 export const WALL_H = 150;
 export const SLING = { x: WORLD.w / 2, y: WORLD.h - WALL_H - 20, r: 44 };
 export const ARENA = {
-  l: 46,
-  r: WORLD.w - 46,
-  t: 230,
-  b: WORLD.h - WALL_H - 130,
+  l: 80,  // 向内收缩，使场地居中
+  r: WORLD.w - 80,  // 向内收缩
+  t: 280,  // 向下收缩
+  b: WORLD.h - WALL_H - 180,  // 向上收缩
 };
 export const PORTAL = { x: WORLD.w / 2, y: ARENA.t - 68, r: 70 };
 

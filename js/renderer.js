@@ -8,74 +8,93 @@ export class Renderer {
     this.view = view;
   }
 
-  // 清空画布
+  // 清空画布 - 深色主题
   clear() {
-    this.ctx.fillStyle = '#fff7fb';
+    this.ctx.fillStyle = '#0d1117';
     this.ctx.fillRect(0, 0, this.view.w, this.view.h);
   }
 
-  // 绘制游戏世界背景
+  // 绘制游戏世界背景 - 透明战斗场地
   drawWorldBackground() {
-    // 绘制竞技场背景
-    const gradient = this.ctx.createLinearGradient(0, ARENA.t, 0, ARENA.b);
-    gradient.addColorStop(0, '#f8f9ff');
-    gradient.addColorStop(1, '#e8ecff');
-    this.ctx.fillStyle = gradient;
-    this.ctx.fillRect(ARENA.l, ARENA.t, ARENA.r - ARENA.l, ARENA.b - ARENA.t);
-
-    // 绘制竞技场边框
-    this.ctx.strokeStyle = '#d0d8ff';
-    this.ctx.lineWidth = 3;
+    // 战斗场地完全透明，显示深色背景
+    // 只绘制边框
+    this.ctx.strokeStyle = 'rgba(88, 166, 255, 0.3)';
+    this.ctx.lineWidth = 2;
+    this.ctx.setLineDash([5, 5]);
     this.ctx.strokeRect(ARENA.l, ARENA.t, ARENA.r - ARENA.l, ARENA.b - ARENA.t);
+    this.ctx.setLineDash([]);
   }
 
-  // 绘制传送门
+  // 绘制传送门 - 扁平椭圆
   drawPortal() {
     const { x, y, r } = PORTAL;
     const portal = gameState.portal;
     
-    // 传送门光晕
-    const glowGradient = this.ctx.createRadialGradient(x, y, r * 0.5, x, y, r * 1.5);
-    glowGradient.addColorStop(0, withAlpha('#9d4edd', 0.3));
-    glowGradient.addColorStop(1, withAlpha('#9d4edd', 0));
+    // 传送门光晕 - 椭圆形状
+    const glowGradient = this.ctx.createRadialGradient(x, y, r * 0.3, x, y, r * 1.8);
+    glowGradient.addColorStop(0, 'rgba(157, 78, 221, 0.4)');
+    glowGradient.addColorStop(1, 'rgba(157, 78, 221, 0)');
     this.ctx.fillStyle = glowGradient;
     this.ctx.beginPath();
-    this.ctx.arc(x, y, r * 1.5, 0, Math.PI * 2);
+    this.ctx.ellipse(x, y, r * 1.8, r * 0.6, 0, 0, Math.PI * 2);
     this.ctx.fill();
 
-    // 传送门主体
+    // 传送门主体 - 扁平椭圆
     const portalGradient = this.ctx.createRadialGradient(x, y, 0, x, y, r);
     portalGradient.addColorStop(0, '#c77dff');
-    portalGradient.addColorStop(0.7, '#9d4edd');
+    portalGradient.addColorStop(0.5, '#9d4edd');
     portalGradient.addColorStop(1, '#7209b7');
     this.ctx.fillStyle = portalGradient;
     this.ctx.beginPath();
-    this.ctx.arc(x, y, r, 0, Math.PI * 2);
+    this.ctx.ellipse(x, y, r, r * 0.4, 0, 0, Math.PI * 2);
     this.ctx.fill();
 
     // 传送门边框
-    this.ctx.strokeStyle = '#5a189a';
-    this.ctx.lineWidth = 4;
+    this.ctx.strokeStyle = 'rgba(199, 125, 255, 0.8)';
+    this.ctx.lineWidth = 3;
+    this.ctx.beginPath();
+    this.ctx.ellipse(x, y, r, r * 0.4, 0, 0, Math.PI * 2);
     this.ctx.stroke();
 
-    // 生命值条
-    const barWidth = r * 2;
-    const barHeight = 8;
-    const barY = y - r - 20;
-    const hpPercent = portal.hp / portal.maxHp;
+    // 传送门旋转效果
+    const time = Date.now() * 0.001;
+    this.ctx.save();
+    this.ctx.translate(x, y);
+    this.ctx.rotate(time);
+    this.ctx.strokeStyle = 'rgba(157, 78, 221, 0.6)';
+    this.ctx.lineWidth = 2;
+    for (let i = 0; i < 3; i++) {
+      const angle = (Math.PI * 2 * i) / 3;
+      const x1 = Math.cos(angle) * r * 0.8;
+      const y1 = Math.sin(angle) * r * 0.3;
+      const x2 = Math.cos(angle + Math.PI) * r * 0.8;
+      const y2 = Math.sin(angle + Math.PI) * r * 0.3;
+      
+      this.ctx.beginPath();
+      this.ctx.moveTo(x1, y1);
+      this.ctx.lineTo(x2, y2);
+      this.ctx.stroke();
+    }
+    this.ctx.restore();
 
-    this.ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
-    this.ctx.fillRect(x - barWidth/2, barY, barWidth, barHeight);
-
-    const hpGradient = this.ctx.createLinearGradient(x - barWidth/2, barY, x + barWidth/2, barY);
-    hpGradient.addColorStop(0, '#ff6b6b');
-    hpGradient.addColorStop(1, '#ee5a52');
-    this.ctx.fillStyle = hpGradient;
-    this.ctx.fillRect(x - barWidth/2, barY, barWidth * hpPercent, barHeight);
-
-    this.ctx.strokeStyle = '#333';
-    this.ctx.lineWidth = 1;
-    this.ctx.strokeRect(x - barWidth/2, barY, barWidth, barHeight);
+    // 绘制传送门生命值
+    if (portal.hp < portal.maxHp) {
+      const barW = r * 2.5;
+      const barH = 8;
+      const barY = y - r - 20;
+      const hpP = portal.hp / portal.maxHp;
+      
+      this.ctx.fillStyle = 'rgba(0,0,0,0.7)';
+      this.ctx.fillRect(x - barW/2, barY, barW, barH);
+      
+      const portalBarColor = hpP > 0.6 ? '#58a6ff' : hpP > 0.3 ? '#f0b429' : '#ff4b4b';
+      this.ctx.fillStyle = portalBarColor;
+      this.ctx.fillRect(x - barW/2, barY, barW * hpP, barH);
+      
+      this.ctx.strokeStyle = 'rgba(255,255,255,0.8)';
+      this.ctx.lineWidth = 1;
+      this.ctx.strokeRect(x - barW/2, barY, barW, barH);
+    }
   }
 
   // 绘制城墙
@@ -83,16 +102,16 @@ export class Renderer {
     const wallY = WORLD.h - WALL_H;
     const wall = gameState.wall;
     
-    // 城墙主体
+    // 城墙主体 - 深色主题
     const wallGradient = this.ctx.createLinearGradient(0, wallY, 0, WORLD.h);
-    wallGradient.addColorStop(0, '#8b7355');
-    wallGradient.addColorStop(0.5, '#6b5a45');
-    wallGradient.addColorStop(1, '#4b3a25');
+    wallGradient.addColorStop(0, '#4a5568');
+    wallGradient.addColorStop(0.5, '#2d3748');
+    wallGradient.addColorStop(1, '#1a202c');
     this.ctx.fillStyle = wallGradient;
     this.ctx.fillRect(ARENA.l, wallY, ARENA.r - ARENA.l, WALL_H);
 
-    // 城城纹理
-    this.ctx.strokeStyle = '#3b2a15';
+    // 城墙纹理
+    this.ctx.strokeStyle = '#1a202c';
     this.ctx.lineWidth = 2;
     for (let x = ARENA.l; x < ARENA.r; x += 40) {
       this.ctx.beginPath();
@@ -107,16 +126,16 @@ export class Renderer {
     const barY = wallY - 20;
     const hpPercent = wall.hp / wall.maxHp;
 
-    this.ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+    this.ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
     this.ctx.fillRect(ARENA.l, barY, barWidth, barHeight);
 
     const hpGradient = this.ctx.createLinearGradient(ARENA.l, barY, ARENA.r, barY);
-    hpGradient.addColorStop(0, '#51cf66');
-    hpGradient.addColorStop(1, '#37b24d');
+    hpGradient.addColorStop(0, '#56d364');
+    hpGradient.addColorStop(1, '#3fb950');
     this.ctx.fillStyle = hpGradient;
     this.ctx.fillRect(ARENA.l, barY, barWidth * hpPercent, barHeight);
 
-    this.ctx.strokeStyle = '#333';
+    this.ctx.strokeStyle = 'rgba(255,255,255,0.3)';
     this.ctx.lineWidth = 1;
     this.ctx.strokeRect(ARENA.l, barY, barWidth, barHeight);
   }
@@ -125,8 +144,8 @@ export class Renderer {
   drawSlingshot() {
     const { x, y, r } = SLING;
     
-    // 弹弓支架
-    this.ctx.strokeStyle = '#8b4513';
+    // 弹弓支架 - 深色主题
+    this.ctx.strokeStyle = '#8b7355';
     this.ctx.lineWidth = 8;
     this.ctx.lineCap = 'round';
     
@@ -148,7 +167,7 @@ export class Renderer {
     this.ctx.arc(x, y, r, 0, Math.PI * 2);
     this.ctx.fill();
 
-    this.ctx.strokeStyle = '#8b4513';
+    this.ctx.strokeStyle = '#8b7355';
     this.ctx.lineWidth = 4;
     this.ctx.stroke();
   }
@@ -182,7 +201,7 @@ export class Renderer {
     }
     
     // 尾迹效果（骑士）
-    if (role.card.effect === "trail" && role.trail.length > 0) {
+    if (role.card.effect === "trail" && role.trail && role.trail.length > 0) {
       for (let i = 0; i < role.trail.length; i++) {
         const p = role.trail[i];
         const alpha = (1 - p.t / p.dur) * 0.4;
@@ -213,25 +232,6 @@ export class Renderer {
     this.ctx.fill();
     this.ctx.stroke();
     
-    // 特殊装饰
-    if (role.card.id === "knight") {
-      this.ctx.fillStyle = "rgba(255,255,255,0.85)";
-      for (let i = 0; i < 4; i++) {
-        const angle = (i * Math.PI * 2) / 4 + gameState.now * 0.8;
-        const dist = role.r * 0.75;
-        this.ctx.beginPath();
-        this.ctx.arc(Math.cos(angle) * dist, Math.sin(angle) * dist, 2.5, 0, Math.PI * 2);
-        this.ctx.fill();
-      }
-    } else if (role.card.id === "archer") {
-      this.ctx.strokeStyle = "rgba(255,255,255,0.9)";
-      this.ctx.lineWidth = 2.5;
-      this.ctx.beginPath();
-      this.ctx.moveTo(-role.r * 0.3, 0);
-      this.ctx.lineTo(role.r * 0.3, 0);
-      this.ctx.stroke();
-    }
-    
     this.ctx.restore();
   }
 
@@ -239,45 +239,7 @@ export class Renderer {
   drawMonster(monster) {
     this.ctx.save();
     this.ctx.translate(monster.x, monster.y);
-
-    // 怪物主体
-    const grd = this.ctx.createRadialGradient(-monster.r * 0.3, -monster.r * 0.3, 4, 0, 0, monster.r);
-    if (monster.elite) {
-      grd.addColorStop(0, "#ffeb3b");
-      grd.addColorStop(0.3, "#ffc107");
-      grd.addColorStop(1, "#ff6f00");
-    } else if (monster.boss) {
-      grd.addColorStop(0, "#f44336");
-      grd.addColorStop(0.3, "#d32f2f");
-      grd.addColorStop(1, "#b71c1c");
-    } else {
-      grd.addColorStop(0, "#9e9e9e");
-      grd.addColorStop(0.3, "#757575");
-      grd.addColorStop(1, "#424242");
-    }
-    
-    this.ctx.fillStyle = grd;
-    this.ctx.strokeStyle = "rgba(0,0,0,0.2)";
-    this.ctx.lineWidth = 2;
-    this.ctx.beginPath();
-    this.ctx.arc(0, 0, monster.r, 0, Math.PI * 2);
-    this.ctx.fill();
-    this.ctx.stroke();
-
-    // 生命值条
-    if (monster.hp < monster.maxHp) {
-      const barWidth = monster.r * 2;
-      const barHeight = 4;
-      const barY = -monster.r - 10;
-      const hpPercent = monster.hp / monster.maxHp;
-
-      this.ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
-      this.ctx.fillRect(-barWidth/2, barY, barWidth, barHeight);
-
-      this.ctx.fillStyle = monster.elite ? '#ffc107' : monster.boss ? '#f44336' : '#666';
-      this.ctx.fillRect(-barWidth/2, barY, barWidth * hpPercent, barHeight);
-    }
-
+    monster.draw(this.ctx);
     this.ctx.restore();
   }
 
@@ -305,15 +267,6 @@ export class Renderer {
       this.ctx.moveTo(effect.x0, effect.y0);
       this.ctx.lineTo(effect.x1, effect.y1);
       this.ctx.stroke();
-    } else if (effect.kind === "pulse") {
-      const progress = effect.t / effect.dur;
-      const alpha = 0.6 * (1 - progress);
-      const scale = 1 + progress * 0.3;
-      
-      this.ctx.fillStyle = withAlpha(effect.color, alpha);
-      this.ctx.beginPath();
-      this.ctx.arc(effect.x, effect.y, effect.r * scale, 0, Math.PI * 2);
-      this.ctx.fill();
     }
     
     this.ctx.restore();
@@ -329,21 +282,6 @@ export class Renderer {
     this.ctx.beginPath();
     this.ctx.arc(particle.x, particle.y, particle.r * scale, 0, Math.PI * 2);
     this.ctx.fill();
-  }
-
-  // 绘制伤害数字
-  drawDamageNumber(damageNumber) {
-    const progress = damageNumber.t / damageNumber.dur;
-    const alpha = 1 - progress;
-    const y = damageNumber.y + damageNumber.vy * progress;
-    
-    this.ctx.save();
-    this.ctx.fillStyle = withAlpha(damageNumber.color, alpha);
-    this.ctx.font = 'bold 16px sans-serif';
-    this.ctx.textAlign = 'center';
-    this.ctx.textBaseline = 'middle';
-    this.ctx.fillText(damageNumber.damage.toString(), damageNumber.x, y);
-    this.ctx.restore();
   }
 
   // 主渲染函数
@@ -369,10 +307,6 @@ export class Renderer {
 
     for (const role of gameState.roles) {
       this.drawRole(role);
-    }
-
-    for (const damageNumber of gameState.damageNumbers) {
-      this.drawDamageNumber(damageNumber);
     }
   }
 }
