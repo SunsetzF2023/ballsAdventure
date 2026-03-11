@@ -188,10 +188,19 @@ function setupUIEvents() {
     });
   }
   
+  // 确保建设界面默认隐藏
+  const buildOverlay = document.getElementById("buildOverlay");
+  if (buildOverlay) {
+    buildOverlay.classList.add('hidden');
+  }
+  
   // 建设界面按钮
   const backToGameBtn = document.getElementById("backToGameBtn");
   if (backToGameBtn) {
-    backToGameBtn.addEventListener('click', hideBuildOverlay);
+    backToGameBtn.addEventListener('click', () => {
+      console.log('返回游戏按钮点击');
+      hideBuildOverlay();
+    });
   }
   
   // 键盘事件
@@ -203,7 +212,8 @@ function handleKeyDown(e) {
     if (gameState.pausedOverlay) {
       hideOverlay();
     } else {
-      showBuildOverlay();
+      // ESC键不应该自动打开建设界面
+      console.log('ESC键按下，但建设界面需要手动打开');
     }
   }
   

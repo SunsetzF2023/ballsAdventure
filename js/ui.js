@@ -1,5 +1,5 @@
 import { CARDS } from './cards.js';
-import { gameState } from './gameState.js';
+import { gameState, createNewSave, loadProgress } from './gameState.js';
 import { performGacha, showOverlay, hideOverlay } from './gameLogic.js';
 
 // UI元素引用
@@ -270,9 +270,12 @@ export function initializeUI() {
     elements.createNewSaveBtn.addEventListener('click', () => {
       const name = elements.newSaveNameEl.value.trim();
       if (name) {
-        // 这里需要调用createNewSave
         console.log('新建存档:', name);
+        createNewSave(gameState.gameProgress.saveSlot, name);
+        updateBuildUI();
         elements.newSaveNameEl.value = '';
+      } else {
+        console.log('请输入存档名称');
       }
     });
   }
