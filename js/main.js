@@ -51,6 +51,13 @@ function init() {
   initializeUI();
   console.log('UI初始化完成');
   
+  // 确保建设界面隐藏
+  const buildOverlay = document.getElementById("buildOverlay");
+  if (buildOverlay) {
+    buildOverlay.classList.add('hidden');
+    console.log('建设界面已强制隐藏');
+  }
+  
   // 设置UI事件
   setupUIEvents();
   console.log('UI事件设置完成');
@@ -237,6 +244,11 @@ function gameLoop(timestamp) {
   const dt = Math.min((timestamp - lastFrameTime) / 1000, 0.1); // 限制最大时间步长
   lastFrameTime = timestamp;
   
+  // 更新renderer的view引用
+  if (renderer && renderer.view !== gameState.view) {
+    renderer.view = gameState.view;
+  }
+  
   if (!gameState.pausedOverlay) {
     // 更新游戏时间
     gameState.now = timestamp / 1000;
@@ -250,7 +262,9 @@ function gameLoop(timestamp) {
   }
   
   // 渲染游戏
-  renderer.render();
+  if (renderer) {
+    renderer.render();
+  }
   
   // 绘制瞄准线
   if (inputHandler) {
