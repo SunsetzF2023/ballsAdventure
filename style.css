@@ -313,12 +313,28 @@ button.primary:active {
 }
 
 /* 建设界面样式 */
+#buildOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(13, 17, 23, 0.95);
+  backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
 .build-panel {
   width: min(650px, 94vw);
   max-height: 85vh;
   overflow-y: auto;
   background: var(--bg2);
   border: 1px solid var(--pill-border);
+  border-radius: 16px;
+  padding: 24px;
 }
 
 .save-management {

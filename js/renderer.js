@@ -1,5 +1,4 @@
 import { WORLD, PORTAL, SLING, ARENA, WALL_H } from './config.js';
-import { withAlpha, shade, clamp, worldToScreen } from './utils.js';
 import { gameState } from './gameState.js';
 
 export class Renderer {
@@ -8,29 +7,33 @@ export class Renderer {
     this.view = view;
   }
 
-  // 清空画布 - 深色主题
   clear() {
     this.ctx.fillStyle = '#0d1117';
     this.ctx.fillRect(0, 0, this.view.w, this.view.h);
   }
 
-  // 绘制游戏世界背景 - 透明战斗场地
   drawWorldBackground() {
-    // 战斗场地完全透明，显示深色背景
-    // 只绘制边框
+    this.ctx.save();
+    this.ctx.translate(this.view.ox, this.view.oy);
+    this.ctx.scale(this.view.scale, this.view.scale);
+    
     this.ctx.strokeStyle = 'rgba(88, 166, 255, 0.3)';
     this.ctx.lineWidth = 2;
     this.ctx.setLineDash([5, 5]);
     this.ctx.strokeRect(ARENA.l, ARENA.t, ARENA.r - ARENA.l, ARENA.b - ARENA.t);
     this.ctx.setLineDash([]);
+    
+    this.ctx.restore();
   }
 
-  // 绘制传送门 - 扁平椭圆
   drawPortal() {
+    this.ctx.save();
+    this.ctx.translate(this.view.ox, this.view.oy);
+    this.ctx.scale(this.view.scale, this.view.scale);
+    
     const { x, y, r } = PORTAL;
     const portal = gameState.portal;
     
-    // 传送门光晕 - 椭圆形状
     const glowGradient = this.ctx.createRadialGradient(x, y, r * 0.3, x, y, r * 1.8);
     glowGradient.addColorStop(0, 'rgba(157, 78, 221, 0.4)');
     glowGradient.addColorStop(1, 'rgba(157, 78, 221, 0)');
@@ -39,7 +42,6 @@ export class Renderer {
     this.ctx.ellipse(x, y, r * 1.8, r * 0.6, 0, 0, Math.PI * 2);
     this.ctx.fill();
 
-    // 传送门主体 - 扁平椭圆
     const portalGradient = this.ctx.createRadialGradient(x, y, 0, x, y, r);
     portalGradient.addColorStop(0, '#c77dff');
     portalGradient.addColorStop(0.5, '#9d4edd');
@@ -48,265 +50,141 @@ export class Renderer {
     this.ctx.beginPath();
     this.ctx.ellipse(x, y, r, r * 0.4, 0, 0, Math.PI * 2);
     this.ctx.fill();
-
-    // 传送门边框
-    this.ctx.strokeStyle = 'rgba(199, 125, 255, 0.8)';
-    this.ctx.lineWidth = 3;
-    this.ctx.beginPath();
-    this.ctx.ellipse(x, y, r, r * 0.4, 0, 0, Math.PI * 2);
-    this.ctx.stroke();
-
-    // 传送门旋转效果
-    const time = Date.now() * 0.001;
-    this.ctx.save();
-    this.ctx.translate(x, y);
-    this.ctx.rotate(time);
-    this.ctx.strokeStyle = 'rgba(157, 78, 221, 0.6)';
-    this.ctx.lineWidth = 2;
-    for (let i = 0; i < 3; i++) {
-      const angle = (Math.PI * 2 * i) / 3;
-      const x1 = Math.cos(angle) * r * 0.8;
-      const y1 = Math.sin(angle) * r * 0.3;
-      const x2 = Math.cos(angle + Math.PI) * r * 0.8;
-      const y2 = Math.sin(angle + Math.PI) * r * 0.3;
-      
-      this.ctx.beginPath();
-      this.ctx.moveTo(x1, y1);
-      this.ctx.lineTo(x2, y2);
-      this.ctx.stroke();
-    }
-    this.ctx.restore();
-
-    // 绘制传送门生命值
-    if (portal.hp < portal.maxHp) {
-      const barW = r * 2.5;
-      const barH = 8;
-      const barY = y - r - 20;
-      const hpP = portal.hp / portal.maxHp;
-      
-      this.ctx.fillStyle = 'rgba(0,0,0,0.7)';
-      this.ctx.fillRect(x - barW/2, barY, barW, barH);
-      
-      const portalBarColor = hpP > 0.6 ? '#58a6ff' : hpP > 0.3 ? '#f0b429' : '#ff4b4b';
-      this.ctx.fillStyle = portalBarColor;
-      this.ctx.fillRect(x - barW/2, barY, barW * hpP, barH);
-      
-      this.ctx.strokeStyle = 'rgba(255,255,255,0.8)';
-      this.ctx.lineWidth = 1;
-      this.ctx.strokeRect(x - barW/2, barY, barW, barH);
-    }
-  }
-
-  // 绘制城墙
-  drawWall() {
-    const wallY = WORLD.h - WALL_H;
-    const wall = gameState.wall;
     
-    // 城墙主体 - 深色主题
-    const wallGradient = this.ctx.createLinearGradient(0, wallY, 0, WORLD.h);
-    wallGradient.addColorStop(0, '#4a5568');
-    wallGradient.addColorStop(0.5, '#2d3748');
-    wallGradient.addColorStop(1, '#1a202c');
-    this.ctx.fillStyle = wallGradient;
-    this.ctx.fillRect(ARENA.l, wallY, ARENA.r - ARENA.l, WALL_H);
-
-    // 城墙纹理
-    this.ctx.strokeStyle = '#1a202c';
-    this.ctx.lineWidth = 2;
-    for (let x = ARENA.l; x < ARENA.r; x += 40) {
-      this.ctx.beginPath();
-      this.ctx.moveTo(x, wallY);
-      this.ctx.lineTo(x, WORLD.h);
-      this.ctx.stroke();
-    }
-
-    // 生命值条
-    const barWidth = ARENA.r - ARENA.l;
-    const barHeight = 10;
-    const barY = wallY - 20;
-    const hpPercent = wall.hp / wall.maxHp;
-
+    const hpPercent = portal.hp / portal.maxHp;
+    const hpColor = hpPercent > 0.5 ? '#56d364' : hpPercent > 0.25 ? '#f0b429' : '#ff8c42';
+    const barWidth = r * 2;
+    const barHeight = 6;
+    const barY = y + r * 0.8;
+    
     this.ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
-    this.ctx.fillRect(ARENA.l, barY, barWidth, barHeight);
-
-    const hpGradient = this.ctx.createLinearGradient(ARENA.l, barY, ARENA.r, barY);
-    hpGradient.addColorStop(0, '#56d364');
-    hpGradient.addColorStop(1, '#3fb950');
-    this.ctx.fillStyle = hpGradient;
-    this.ctx.fillRect(ARENA.l, barY, barWidth * hpPercent, barHeight);
-
-    this.ctx.strokeStyle = 'rgba(255,255,255,0.3)';
-    this.ctx.lineWidth = 1;
-    this.ctx.strokeRect(ARENA.l, barY, barWidth, barHeight);
+    this.ctx.fillRect(x - barWidth/2, barY, barWidth, barHeight);
+    this.ctx.fillStyle = hpColor;
+    this.ctx.fillRect(x - barWidth/2, barY, barWidth * hpPercent, barHeight);
+    
+    this.ctx.restore();
   }
 
-  // 绘制弹弓
+  drawWall() {
+    this.ctx.save();
+    this.ctx.translate(this.view.ox, this.view.oy);
+    this.ctx.scale(this.view.scale, this.view.scale);
+    
+    const wall = gameState.wall;
+    const wallY = WORLD.h - WALL_H;
+    
+    const wallGradient = this.ctx.createLinearGradient(0, wallY, 0, WORLD.h);
+    wallGradient.addColorStop(0, '#58a6ff');
+    wallGradient.addColorStop(1, '#3d5a80');
+    this.ctx.fillStyle = wallGradient;
+    this.ctx.fillRect(0, wallY, WORLD.w, WALL_H);
+    
+    const hpPercent = wall.hp / wall.maxHp;
+    const wallColor = hpPercent > 0.5 ? '#56d364' : hpPercent > 0.25 ? '#f0b429' : '#ff8c42';
+    const barHeight = 8;
+    const barY = wallY - 15;
+    
+    this.ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+    this.ctx.fillRect(0, barY, WORLD.w, barHeight);
+    this.ctx.fillStyle = wallColor;
+    this.ctx.fillRect(0, barY, WORLD.w * hpPercent, barHeight);
+    
+    this.ctx.restore();
+  }
+
   drawSlingshot() {
+    this.ctx.save();
+    this.ctx.translate(this.view.ox, this.view.oy);
+    this.ctx.scale(this.view.scale, this.view.scale);
+    
     const { x, y, r } = SLING;
     
-    // 弹弓支架 - 深色主题
-    this.ctx.strokeStyle = '#8b7355';
+    this.ctx.strokeStyle = '#8b4513';
     this.ctx.lineWidth = 8;
     this.ctx.lineCap = 'round';
     
-    // 左支架
     this.ctx.beginPath();
-    this.ctx.moveTo(x - r, y + r);
-    this.ctx.lineTo(x - r * 0.3, y - r * 0.5);
+    this.ctx.moveTo(x - r, y);
+    this.ctx.lineTo(x - r, y - r * 2);
     this.ctx.stroke();
     
-    // 右支架
     this.ctx.beginPath();
-    this.ctx.moveTo(x + r, y + r);
-    this.ctx.lineTo(x + r * 0.3, y - r * 0.5);
-    this.ctx.stroke();
-
-    // 弹弓中心圈
-    this.ctx.fillStyle = 'rgba(139, 69, 19, 0.3)';
-    this.ctx.beginPath();
-    this.ctx.arc(x, y, r, 0, Math.PI * 2);
-    this.ctx.fill();
-
-    this.ctx.strokeStyle = '#8b7355';
-    this.ctx.lineWidth = 4;
-    this.ctx.stroke();
-  }
-
-  // 绘制角色
-  drawRole(role) {
-    const c = role.card.color;
-    this.ctx.save();
-    this.ctx.translate(role.x, role.y);
-
-    // 寿命可视化
-    const lifeP = clamp(role.life / Math.max(0.001, role.maxLife), 0, 1);
-    const fade = lifeP < 0.25 ? (0.25 + lifeP * 3.0) : 1;
-    this.ctx.globalAlpha = fade;
-    
-    // 旋转效果（大盾）
-    if (role.card.effect === "spin" && !role.stopped) {
-      this.ctx.rotate(role.rotation);
-    }
-    
-    // 光晕效果（法师）
-    if (role.card.effect === "glow") {
-      const glowGrd = this.ctx.createRadialGradient(0, 0, 0, 0, 0, role.r * 1.8);
-      glowGrd.addColorStop(0, withAlpha(c, 0.25));
-      glowGrd.addColorStop(0.4, withAlpha(c, 0.12));
-      glowGrd.addColorStop(1, withAlpha(c, 0));
-      this.ctx.fillStyle = glowGrd;
-      this.ctx.beginPath();
-      this.ctx.arc(0, 0, role.r * 1.8, 0, Math.PI * 2);
-      this.ctx.fill();
-    }
-    
-    // 尾迹效果（骑士）
-    if (role.card.effect === "trail" && role.trail && role.trail.length > 0) {
-      for (let i = 0; i < role.trail.length; i++) {
-        const p = role.trail[i];
-        const alpha = (1 - p.t / p.dur) * 0.4;
-        const r = role.r * (0.3 + 0.7 * (1 - p.t / p.dur));
-        this.ctx.fillStyle = withAlpha(c, alpha);
-        this.ctx.beginPath();
-        this.ctx.arc(p.x - role.x, p.y - role.y, r, 0, Math.PI * 2);
-        this.ctx.fill();
-      }
-    }
-    
-    // 阴影
-    this.ctx.fillStyle = "rgba(0,0,0,0.12)";
-    this.ctx.beginPath();
-    this.ctx.ellipse(6, role.r * 0.62, role.r * 0.92, role.r * 0.42, 0, 0, Math.PI * 2);
-    this.ctx.fill();
-    
-    // 主体
-    const grd = this.ctx.createRadialGradient(-role.r * 0.35, -role.r * 0.35, 6, 0, 0, role.r);
-    grd.addColorStop(0, "#fff");
-    grd.addColorStop(0.2, c);
-    grd.addColorStop(1, shade(c, -18));
-    this.ctx.fillStyle = grd;
-    this.ctx.strokeStyle = "rgba(0,0,0,0.12)";
-    this.ctx.lineWidth = 3;
-    this.ctx.beginPath();
-    this.ctx.arc(0, 0, role.r, 0, Math.PI * 2);
-    this.ctx.fill();
+    this.ctx.moveTo(x + r, y);
+    this.ctx.lineTo(x + r, y - r * 2);
     this.ctx.stroke();
     
     this.ctx.restore();
   }
 
-  // 绘制怪物
-  drawMonster(monster) {
+  drawRoles() {
     this.ctx.save();
-    this.ctx.translate(monster.x, monster.y);
-    monster.draw(this.ctx);
-    this.ctx.restore();
-  }
-
-  // 绘制特效
-  drawEffect(effect) {
-    this.ctx.save();
+    this.ctx.translate(this.view.ox, this.view.oy);
+    this.ctx.scale(this.view.scale, this.view.scale);
     
-    if (effect.kind === "ring") {
-      const progress = effect.t / effect.dur;
-      const radius = effect.r0 + (effect.r1 - effect.r0) * progress;
-      const alpha = 1 - progress;
-      
-      this.ctx.strokeStyle = withAlpha(effect.color, alpha);
-      this.ctx.lineWidth = 6 * (1 - progress * 0.5);
-      this.ctx.beginPath();
-      this.ctx.arc(effect.x, effect.y, radius, 0, Math.PI * 2);
-      this.ctx.stroke();
-    } else if (effect.kind === "line") {
-      const progress = effect.t / effect.dur;
-      const alpha = 1 - progress;
-      
-      this.ctx.strokeStyle = withAlpha(effect.color, alpha);
-      this.ctx.lineWidth = 4 * (1 - progress * 0.3);
-      this.ctx.beginPath();
-      this.ctx.moveTo(effect.x0, effect.y0);
-      this.ctx.lineTo(effect.x1, effect.y1);
-      this.ctx.stroke();
+    for (const role of gameState.roles) {
+      role.draw(this.ctx);
     }
     
     this.ctx.restore();
   }
 
-  // 绘制粒子
-  drawParticle(particle) {
-    const progress = particle.t / particle.dur;
-    const alpha = 1 - progress;
-    const scale = 1 - progress * 0.5;
+  drawMonsters() {
+    this.ctx.save();
+    this.ctx.translate(this.view.ox, this.view.oy);
+    this.ctx.scale(this.view.scale, this.view.scale);
     
-    this.ctx.fillStyle = withAlpha(particle.color, alpha);
-    this.ctx.beginPath();
-    this.ctx.arc(particle.x, particle.y, particle.r * scale, 0, Math.PI * 2);
-    this.ctx.fill();
+    for (const monster of gameState.monsters) {
+      monster.draw(this.ctx);
+    }
+    
+    this.ctx.restore();
   }
 
-  // 主渲染函数
-  render() {
-    this.clear();
-    this.drawWorldBackground();
-    this.drawPortal();
-    this.drawWall();
-    this.drawSlingshot();
-
-    // 绘制所有游戏对象
+  drawEffects() {
+    this.ctx.save();
+    this.ctx.translate(this.view.ox, this.view.oy);
+    this.ctx.scale(this.view.scale, this.view.scale);
+    
     for (const effect of gameState.effects) {
       this.drawEffect(effect);
     }
+    
+    this.ctx.restore();
+  }
 
-    for (const particle of gameState.particles) {
-      this.drawParticle(particle);
+  drawEffect(effect) {
+    switch (effect.kind) {
+      case 'burst':
+        const alpha = 1 - (effect.t / effect.dur);
+        this.ctx.fillStyle = `rgba(255, 138, 91, ${alpha})`;
+        this.ctx.beginPath();
+        this.ctx.arc(effect.x, effect.y, effect.radius * (effect.t / effect.dur), 0, Math.PI * 2);
+        this.ctx.fill();
+        break;
+        
+      case 'fieldSlow':
+        const fieldAlpha = 0.3 + 0.2 * Math.sin(effect.t * 3);
+        this.ctx.fillStyle = `rgba(121, 242, 225, ${fieldAlpha})`;
+        this.ctx.beginPath();
+        this.ctx.arc(effect.x, effect.y, effect.radius, 0, Math.PI * 2);
+        this.ctx.fill();
+        break;
     }
+  }
 
-    for (const monster of gameState.monsters) {
-      this.drawMonster(monster);
+  drawDamageNumbers() {
+    this.ctx.save();
+    this.ctx.translate(this.view.ox, this.view.oy);
+    this.ctx.scale(this.view.scale, this.view.scale);
+    
+    for (const dn of gameState.damageNumbers) {
+      const alpha = 1 - (dn.t / dn.dur);
+      this.ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
+      this.ctx.font = 'bold 16px sans-serif';
+      this.ctx.textAlign = 'center';
+      this.ctx.fillText(dn.damage.toString(), dn.x, dn.y);
     }
-
-    for (const role of gameState.roles) {
-      this.drawRole(role);
-    }
+    
+    this.ctx.restore();
   }
 }
