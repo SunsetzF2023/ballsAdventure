@@ -243,13 +243,17 @@ export function hideBuildOverlay() {
 // 初始化UI事件
 export function initializeUI() {
   // 覆盖层按钮
-  elements.overlayBtn.addEventListener('click', () => {
-    hideOverlay();
-    // 这里需要处理进入下一天或重新开始的逻辑
-  });
+  if (elements.overlayBtn) {
+    elements.overlayBtn.addEventListener('click', () => {
+      hideOverlay();
+      // 这里需要处理进入下一天或重新开始的逻辑
+    });
+  }
   
   // 建设界面按钮
-  elements.backToGameBtn.addEventListener('click', hideBuildOverlay);
+  if (elements.backToGameBtn) {
+    elements.backToGameBtn.addEventListener('click', hideBuildOverlay);
+  }
   
   // 游戏界面十连抽按钮
   if (elements.gameGachaBtn) {
@@ -261,19 +265,22 @@ export function initializeUI() {
     });
   }
   
-  elements.createNewSaveBtn.addEventListener('click', () => {
-    const name = elements.newSaveNameEl.value.trim();
-    if (name) {
-      // 这里需要调用createNewSave
-      console.log('新建存档:', name);
-      elements.newSaveNameEl.value = '';
-      updateBuildUI();
-    }
-  });
+  // 新建存档按钮
+  if (elements.createNewSaveBtn) {
+    elements.createNewSaveBtn.addEventListener('click', () => {
+      const name = elements.newSaveNameEl.value.trim();
+      if (name) {
+        // 这里需要调用createNewSave
+        console.log('新建存档:', name);
+        elements.newSaveNameEl.value = '';
+      }
+    });
+  }
+  
+  updateBuildUI();
   
   // 初始化渲染
   renderCards();
-  updateHUD();
 }
 
 // 更新伤害数字位置
