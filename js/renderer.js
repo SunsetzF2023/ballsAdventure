@@ -187,4 +187,17 @@ export class Renderer {
     
     this.ctx.restore();
   }
+
+  // 主渲染方法
+  render() {
+    this.clear();
+    this.drawWorldBackground();
+    this.drawPortal();
+    this.drawWall();
+    this.drawSlingshot();
+    this.drawRoles();
+    this.drawMonsters();
+    this.drawEffects();
+    this.drawDamageNumbers();
+  }
 }
