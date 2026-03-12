@@ -65,9 +65,9 @@ export class InputHandler {
       if (!card) return;
       
       if (card.type === "role") {
-        // 检查是否点击了弹弓区域
+        // 检查是否点击了弹弓区域 - 增大检测范围
         const distToSling = Math.hypot(worldPos.x - SLING.x, worldPos.y - SLING.y);
-        if (distToSling <= SLING.r * 2.5) {
+        if (distToSling <= SLING.r * 4) { // 增大检测范围，更容易触发
           // 在点击位置创建角色，而不是弹弓位置
           if (gameState.mana < card.cost) {
             this.flashHint("法力不足！");
@@ -114,8 +114,13 @@ export class InputHandler {
   }
 
   handlePointerUp(ev) {
-    if (!this.aiming.active || !this.draggingRole) return;
+    console.log('鼠标松开事件触发');
+    if (!this.aiming.active || !this.draggingRole) {
+      console.log('没有正在拖拽的角色');
+      return;
+    }
     
+    console.log('正在处理发射');
     this.aiming.active = false;
     const card = CARDS.find((c) => c.id === this.selectedCardId);
     if (!card) return;
@@ -125,7 +130,9 @@ export class InputHandler {
     const dy = SLING.y - this.draggingRole.y;
     const pull = Math.hypot(dx, dy);
     
-    if (pull > 20) { // 最小拖拽距离
+    console.log('拖拽距离:', pull);
+    
+    if (pull > 5) { // 大幅降低最小拖拽距离，几乎任何拖拽都能发射
       // 计算发射速度和方向
       const angle = Math.atan2(dy, dx);
       const speed = Math.min(pull * 4.5, 800) * (card.launchSpeedMul || 1); // 限制最大速度
