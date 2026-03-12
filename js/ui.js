@@ -213,7 +213,7 @@ function renderSaveSlots() {
         if (slotNum !== gameState.gameProgress.saveSlot) {
           // 这里需要调用saveProgress和loadProgress
           console.log('切换存档:', slotNum);
-          updateBuildUI();
+          // 不要在这里调用updateBuildUI，避免循环
         }
       } else {
         // 空槽位，提示新建
@@ -221,7 +221,7 @@ function renderSaveSlots() {
         if (name) {
           // 这里需要调用createNewSave
           console.log('新建存档:', slotNum, name);
-          updateBuildUI();
+          // 不要在这里调用updateBuildUI，避免循环
         }
       }
     });
@@ -278,15 +278,14 @@ export function initializeUI() {
       if (name) {
         console.log('新建存档:', name);
         createNewSave(gameState.gameProgress.saveSlot, name);
-        updateBuildUI();
+        // 不要在这里调用updateBuildUI，避免循环
         elements.newSaveNameEl.value = '';
+        console.log('存档创建完成');
       } else {
         console.log('请输入存档名称');
       }
     });
   }
-  
-  updateBuildUI();
   
   // 初始化渲染
   renderCards();
