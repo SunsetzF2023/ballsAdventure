@@ -29,7 +29,7 @@ export const CARDS = [
     name: "棉花骑士",
     cost: 2,
     weight: 1.05,
-    radius: 26,
+    radius: 18, // 从26缩小到18
     color: "#ff78b8",
     drag: 1.85,
     launchSpeedMul: 1.15,
@@ -44,7 +44,7 @@ export const CARDS = [
     name: "糖霜弓手",
     cost: 3,
     weight: 0.85,
-    radius: 23,
+    radius: 16, // 从23缩小到16
     color: "#67d6ff",
     drag: 2.8,
     launchSpeedMul: 1.35,
@@ -59,7 +59,7 @@ export const CARDS = [
     name: "果冻法师",
     cost: 4,
     weight: 0.72,
-    radius: 21,
+    radius: 15, // 从21缩小到15
     color: "#a67bff",
     drag: 2.2,
     launchSpeedMul: 0.95,
@@ -74,7 +74,7 @@ export const CARDS = [
     name: "软糖大盾",
     cost: 3,
     weight: 1.45,
-    radius: 30,
+    radius: 20, // 从30缩小到20
     color: "#ffcc57",
     drag: 1.5,
     launchSpeedMul: 0.75,
@@ -129,7 +129,7 @@ export const CARDS = [
     name: "烈焰法师",
     cost: 5,
     weight: 0.88,
-    radius: 22,
+    radius: 15, // 从22缩小到15
     color: "#ff6b35",
     drag: 2.0,
     launchSpeedMul: 1.0,

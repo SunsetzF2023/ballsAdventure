@@ -63,9 +63,9 @@ export class InputHandler {
       if (!card) return;
       
       if (card.type === "role") {
-        // 检查是否点击了弹弓区域
+        // 检查是否点击了弹弓区域 - 增大检测范围
         const distToSling = Math.hypot(worldPos.x - SLING.x, worldPos.y - SLING.y);
-        if (distToSling <= SLING.r * 2) {
+        if (distToSling <= SLING.r * 3) { // 增大检测范围
           // 在弹弓处创建角色
           if (this.createRoleAtSling(card)) {
             this.aiming = {
@@ -74,6 +74,7 @@ export class InputHandler {
               pos: { x: worldPos.x, y: worldPos.y },
               roleId: this.lastCreatedRoleId
             };
+            console.log('开始瞄准弹弓');
           }
         }
       } else if (card.type === "spell") {
@@ -97,14 +98,14 @@ export class InputHandler {
     const card = CARDS.find((c) => c.id === this.selectedCardId);
     if (!card || !this.aiming.roleId) return;
     
-    // 计算发射速度
+    // 计算发射速度 - 改进手感
     const dx = this.aiming.start.x - this.aiming.pos.x;
     const dy = this.aiming.start.y - this.aiming.pos.y;
-    const pull = Math.min(Math.hypot(dx, dy), 140);
+    const pull = Math.min(Math.hypot(dx, dy), 160); // 增加最大拖拽距离
     
-    if (pull > 10) { // 最小拖拽距离
+    if (pull > 15) { // 降低最小拖拽距离，更容易发射
       const angle = Math.atan2(dy, dx);
-      const speed = pull * 4 * (card.launchSpeedMul || 1);
+      const speed = pull * 3.5 * (card.launchSpeedMul || 1); // 调整速度系数
       const vx = Math.cos(angle) * speed;
       const vy = Math.sin(angle) * speed;
       
@@ -113,6 +114,8 @@ export class InputHandler {
       role.vx = vx;
       role.vy = vy;
       role.stopped = false; // 开始移动
+      
+      console.log('发射角色，速度:', speed);
       
       // 清除选择
       this.selectedCardId = null;
@@ -123,6 +126,7 @@ export class InputHandler {
         gameState.roles.splice(index, 1);
         // 退还法力
         gameState.mana += card.cost;
+        console.log('取消发射，退还法力');
       }
     }
   }

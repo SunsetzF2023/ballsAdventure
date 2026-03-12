@@ -96,14 +96,10 @@ export class Role {
     ctx.ellipse(6, this.r * 0.62, this.r * 0.92, this.r * 0.42, 0, 0, Math.PI * 2);
     ctx.fill();
     
-    // 主体
-    const grd = ctx.createRadialGradient(-this.r * 0.35, -this.r * 0.35, 6, 0, 0, this.r);
-    grd.addColorStop(0, "#ffffff");
-    grd.addColorStop(0.2, this.card.color);
-    grd.addColorStop(1, this.card.color + "cc");
-    ctx.fillStyle = grd;
-    ctx.strokeStyle = "rgba(0,0,0,0.12)";
-    ctx.lineWidth = 3;
+    // 主体 - 移除3D效果，使用纯色
+    ctx.fillStyle = this.card.color;
+    ctx.strokeStyle = "rgba(0,0,0,0.2)";
+    ctx.lineWidth = 2;
     ctx.beginPath();
     ctx.arc(0, 0, this.r, 0, Math.PI * 2);
     ctx.fill();
