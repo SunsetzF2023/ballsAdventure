@@ -237,7 +237,13 @@ export function showBuildOverlay() {
 
 // 隐藏建设界面
 export function hideBuildOverlay() {
-  elements.buildOverlayEl.classList.add('hidden');
+  console.log('隐藏建设界面调用');
+  if (elements.buildOverlayEl) {
+    elements.buildOverlayEl.classList.add('hidden');
+    console.log('建设界面已隐藏');
+  } else {
+    console.error('buildOverlayEl元素不存在');
+  }
 }
 
 // 初始化UI事件

@@ -56,6 +56,8 @@ function init() {
   if (buildOverlay) {
     buildOverlay.classList.add('hidden');
     console.log('建设界面已强制隐藏');
+  } else {
+    console.error('找不到buildOverlay元素');
   }
   
   // 设置UI事件

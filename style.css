@@ -270,6 +270,10 @@ canvas#game {
 #overlay.hidden {
   display: none;
 }
+
+#buildOverlay.hidden {
+  display: none;
+}
 .panel {
   width: min(520px, 92vw);
   border-radius: 22px;
