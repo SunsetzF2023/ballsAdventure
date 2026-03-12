@@ -9,9 +9,11 @@ export class InputHandler {
     this.aiming = {
       active: false,
       start: { x: 0, y: 0 },
-      pos: { x: 0, y: 0 }
+      pos: { x: 0, y: 0 },
+      roleId: null
     };
     this.selectedCardId = null;
+    this.draggingRole = null; // 正在拖拽的角色
     this.setupEventListeners();
   }
 
@@ -63,19 +65,33 @@ export class InputHandler {
       if (!card) return;
       
       if (card.type === "role") {
-        // 检查是否点击了弹弓区域 - 增大检测范围
+        // 检查是否点击了弹弓区域
         const distToSling = Math.hypot(worldPos.x - SLING.x, worldPos.y - SLING.y);
-        if (distToSling <= SLING.r * 3) { // 增大检测范围
-          // 在弹弓处创建角色
-          if (this.createRoleAtSling(card)) {
-            this.aiming = {
-              active: true,
-              start: { x: SLING.x, y: SLING.y },
-              pos: { x: worldPos.x, y: worldPos.y },
-              roleId: this.lastCreatedRoleId
-            };
-            console.log('开始瞄准弹弓');
+        if (distToSling <= SLING.r * 2.5) {
+          // 在点击位置创建角色，而不是弹弓位置
+          if (gameState.mana < card.cost) {
+            this.flashHint("法力不足！");
+            return;
           }
+          
+          // 在鼠标点击位置创建角色
+          const role = new Role(card, worldPos.x, worldPos.y, 0, 0);
+          role.stopped = true;
+          gameState.roles.push(role);
+          this.draggingRole = role;
+          
+          // 消耗法力
+          gameState.mana -= card.cost;
+          
+          // 开始拖拽瞄准
+          this.aiming = {
+            active: true,
+            start: { x: worldPos.x, y: worldPos.y },
+            pos: { x: worldPos.x, y: worldPos.y },
+            roleId: role
+          };
+          
+          console.log('开始拖拽角色，位置:', worldPos.x, worldPos.y);
         }
       } else if (card.type === "spell") {
         // 法术卡直接施放
@@ -85,49 +101,57 @@ export class InputHandler {
   }
 
   handlePointerMove(ev) {
-    if (!this.aiming.active) return;
+    if (!this.aiming.active || !this.draggingRole) return;
     
-    const p = this.screenToWorld(ev.clientX, ev.clientY);
-    this.aiming.pos = p;
+    const worldPos = this.screenToWorld(ev.clientX, ev.clientY);
+    
+    // 更新角色位置跟随鼠标
+    this.draggingRole.x = worldPos.x;
+    this.draggingRole.y = worldPos.y;
+    
+    // 更新瞄准位置
+    this.aiming.pos = worldPos;
   }
 
   handlePointerUp(ev) {
-    if (!this.aiming.active) return;
+    if (!this.aiming.active || !this.draggingRole) return;
     
     this.aiming.active = false;
     const card = CARDS.find((c) => c.id === this.selectedCardId);
-    if (!card || !this.aiming.roleId) return;
+    if (!card) return;
     
-    // 计算发射速度 - 改进手感
-    const dx = this.aiming.start.x - this.aiming.pos.x;
-    const dy = this.aiming.start.y - this.aiming.pos.y;
-    const pull = Math.min(Math.hypot(dx, dy), 160); // 增加最大拖拽距离
+    // 计算弹弓发射 - 从弹弓位置到当前位置
+    const dx = SLING.x - this.draggingRole.x;
+    const dy = SLING.y - this.draggingRole.y;
+    const pull = Math.hypot(dx, dy);
     
-    if (pull > 15) { // 降低最小拖拽距离，更容易发射
+    if (pull > 20) { // 最小拖拽距离
+      // 计算发射速度和方向
       const angle = Math.atan2(dy, dx);
-      const speed = pull * 3.5 * (card.launchSpeedMul || 1); // 调整速度系数
+      const speed = Math.min(pull * 4.5, 800) * (card.launchSpeedMul || 1); // 限制最大速度
       const vx = Math.cos(angle) * speed;
       const vy = Math.sin(angle) * speed;
       
-      // 发射已创建的角色
-      const role = this.aiming.roleId;
-      role.vx = vx;
-      role.vy = vy;
-      role.stopped = false; // 开始移动
+      // 发射角色
+      this.draggingRole.vx = vx;
+      this.draggingRole.vy = vy;
+      this.draggingRole.stopped = false;
       
-      console.log('发射角色，速度:', speed);
+      console.log('弹弓发射！速度:', speed, '方向:', angle);
       
-      // 清除选择
+      // 清除状态
       this.selectedCardId = null;
+      this.draggingRole = null;
     } else {
-      // 取消发射，移除角色
-      const index = gameState.roles.indexOf(this.aiming.roleId);
+      // 取消发射，移除角色并退还法力
+      const index = gameState.roles.indexOf(this.draggingRole);
       if (index > -1) {
         gameState.roles.splice(index, 1);
-        // 退还法力
         gameState.mana += card.cost;
         console.log('取消发射，退还法力');
       }
+      
+      this.draggingRole = null;
     }
   }
 
@@ -214,75 +238,71 @@ export class InputHandler {
     }
   }
 
-  // 绘制瞄准辅助线 - 俯视视角直线轨迹
+  // 绘制瞄准辅助线 - 弹弓拖拽效果
   drawAim(ctx) {
-    if (!this.aiming.active) return;
+    if (!this.aiming.active || !this.draggingRole) return;
     
-    const card = CARDS.find((c) => c.id === this.selectedCardId);
-    if (!card) return;
-
-    const dx = this.aiming.pos.x - this.aiming.start.x;
-    const dy = this.aiming.pos.y - this.aiming.start.y;
-    const pull = Math.min(Math.hypot(dx, dy), 140);
+    ctx.save();
     
-    if (pull > 0) {
-      ctx.save();
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
+    // 绘制弹弓线
+    ctx.strokeStyle = '#8b4513';
+    ctx.lineWidth = 6;
+    ctx.lineCap = 'round';
+    
+    // 左边弹弓线
+    ctx.beginPath();
+    ctx.moveTo(SLING.x - SLING.r, SLING.y);
+    ctx.lineTo(this.draggingRole.x, this.draggingRole.y);
+    ctx.stroke();
+    
+    // 右边弹弓线
+    ctx.beginPath();
+    ctx.moveTo(SLING.x + SLING.r, SLING.y);
+    ctx.lineTo(this.draggingRole.x, this.draggingRole.y);
+    ctx.stroke();
+    
+    // 绘制轨迹预览
+    const dx = SLING.x - this.draggingRole.x;
+    const dy = SLING.y - this.draggingRole.y;
+    const pull = Math.hypot(dx, dy);
+    
+    if (pull > 20) {
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
       ctx.lineWidth = 2;
-      ctx.setLineDash([8, 4]);
+      ctx.setLineDash([6, 3]);
       
-      // 计算发射方向和速度
-      const angle = Math.atan2(-dy, -dx); // 反向，因为拖拽方向与发射方向相反
-      const speed = pull * 4 * (card.launchSpeedMul || 1);
+      const angle = Math.atan2(dy, dx);
+      const speed = Math.min(pull * 4.5, 800);
       const vx = Math.cos(angle) * speed;
       const vy = Math.sin(angle) * speed;
       
-      // 绘制直线轨迹预判
+      // 模拟轨迹
       ctx.beginPath();
-      ctx.moveTo(this.aiming.start.x, this.aiming.start.y);
+      ctx.moveTo(this.draggingRole.x, this.draggingRole.y);
       
-      // 模拟弹道轨迹（考虑减速）
-      let px = this.aiming.start.x;
-      let py = this.aiming.start.y;
+      let px = this.draggingRole.x;
+      let py = this.draggingRole.y;
       let pvx = vx;
       let pvy = vy;
-      const drag = Math.exp(-card.drag * 0.016); // 使用卡牌的减速系数
       
       for (let i = 0; i < 30; i++) {
-        px += pvx * 0.016;
-        py += pvy * 0.016;
+        const dt = 0.05;
+        pvx *= Math.exp(-2.0 * dt);
+        pvy *= Math.exp(-2.0 * dt);
+        px += pvx * dt;
+        py += pvy * dt;
         ctx.lineTo(px, py);
         
-        // 应用减速
-        pvx *= drag;
-        pvy *= drag;
-        
-        // 绘制轨迹点
         if (i % 3 === 0) {
-          ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+          ctx.stroke();
           ctx.beginPath();
-          ctx.arc(px, py, 3, 0, Math.PI * 2);
-          ctx.fill();
-        }
-        
-        // 检查是否超出场地或速度太小
-        if (px < 0 || px > WORLD.w || py < 0 || py > WORLD.h || Math.hypot(pvx, pvy) < 10) {
-          break;
+          ctx.moveTo(px, py);
         }
       }
       
       ctx.stroke();
-      
-      // 绘制拖拽线
-      ctx.strokeStyle = 'rgba(255, 200, 100, 0.8)';
-      ctx.lineWidth = 3;
-      ctx.setLineDash([]);
-      ctx.beginPath();
-      ctx.moveTo(this.aiming.start.x, this.aiming.start.y);
-      ctx.lineTo(this.aiming.pos.x, this.aiming.pos.y);
-      ctx.stroke();
-      
-      ctx.restore();
     }
+    
+    ctx.restore();
   }
 }
