@@ -142,6 +142,21 @@ function renderCards() {
       
       // 点击事件
       el.addEventListener("click", () => {
+        console.log('卡牌点击事件触发:', card.id);
+        
+        // 检查inputHandler是否存在
+        if (!inputHandler) {
+          console.error('inputHandler不存在');
+          return;
+        }
+        
+        // 检查卡牌是否存在
+        if (!card) {
+          console.error('卡牌数据不存在');
+          return;
+        }
+        
+        console.log('调用selectCard:', card.id);
         inputHandler.selectCard(card.id);
         updateCardStyles();
         updateHint();
@@ -158,11 +173,20 @@ function renderCards() {
 
 // 更新卡牌样式
 function updateCardStyles() {
-  for (const el of document.querySelectorAll(".card")) {
+  console.log('更新卡牌样式');
+  const cards = document.querySelectorAll(".card");
+  console.log('找到卡牌数量:', cards.length);
+  
+  for (const el of cards) {
     const id = el.dataset.cardId;
     const card = CARDS.find((c) => c.id === id);
-    el.classList.toggle("selected", id === inputHandler.selectedCardId);
-    el.classList.toggle("disabled", !!card && card.cost > gameState.mana);
+    const isSelected = id === inputHandler?.selectedCardId;
+    const isDisabled = !!card && card.cost > gameState.mana;
+    
+    console.log(`卡牌 ${id}: 选中=${isSelected}, 禁用=${isDisabled}`);
+    
+    el.classList.toggle("selected", isSelected);
+    el.classList.toggle("disabled", isDisabled);
   }
 }
 

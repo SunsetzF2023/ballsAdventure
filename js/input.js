@@ -192,7 +192,22 @@ export class InputHandler {
   }
 
   selectCard(cardId) {
+    console.log('选择卡牌:', cardId);
     this.selectedCardId = cardId;
+    
+    // 更新gameState中的selectedCardId
+    gameState.selectedCardId = cardId;
+    
+    // 更新UI提示
+    const card = CARDS.find(c => c.id === cardId);
+    if (card) {
+      const hintEl = document.getElementById("hudHint");
+      if (hintEl) {
+        hintEl.textContent = card.type === 'role' 
+          ? `在弹弓上拖拽发射 ${card.name}`
+          : `点击场地施放 ${card.name}`;
+      }
+    }
   }
 
   // 绘制瞄准辅助线 - 俯视视角直线轨迹
