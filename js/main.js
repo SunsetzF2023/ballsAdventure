@@ -175,17 +175,13 @@ function renderCards() {
 
 // 更新卡牌样式
 function updateCardStyles() {
-  console.log('更新卡牌样式');
   const cards = document.querySelectorAll(".card");
-  console.log('找到卡牌数量:', cards.length);
   
   for (const el of cards) {
     const id = el.dataset.cardId;
     const card = CARDS.find((c) => c.id === id);
     const isSelected = id === inputHandler?.selectedCardId;
     const isDisabled = !!card && card.cost > gameState.mana;
-    
-    console.log(`卡牌 ${id}: 选中=${isSelected}, 禁用=${isDisabled}`);
     
     el.classList.toggle("selected", isSelected);
     el.classList.toggle("disabled", isDisabled);
