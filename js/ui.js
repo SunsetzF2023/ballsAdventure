@@ -240,6 +240,7 @@ export function hideBuildOverlay() {
   console.log('隐藏建设界面调用');
   if (elements.buildOverlayEl) {
     elements.buildOverlayEl.classList.add('hidden');
+    elements.buildOverlayEl.style.display = 'none'; // 强制隐藏
     console.log('建设界面已隐藏');
   } else {
     console.error('buildOverlayEl元素不存在');

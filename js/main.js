@@ -51,10 +51,11 @@ function init() {
   initializeUI();
   console.log('UI初始化完成');
   
-  // 确保建设界面隐藏
+  // 确保建设界面隐藏 - 多重保险
   const buildOverlay = document.getElementById("buildOverlay");
   if (buildOverlay) {
     buildOverlay.classList.add('hidden');
+    buildOverlay.style.display = 'none'; // 强制隐藏
     console.log('建设界面已强制隐藏');
   } else {
     console.error('找不到buildOverlay元素');
@@ -217,10 +218,11 @@ function setupUIEvents() {
     });
   }
   
-  // 确保建设界面默认隐藏
+  // 确保建设界面默认隐藏 - 再次强制
   const buildOverlay = document.getElementById("buildOverlay");
   if (buildOverlay) {
     buildOverlay.classList.add('hidden');
+    buildOverlay.style.display = 'none';
   }
   
   // 建设界面按钮
