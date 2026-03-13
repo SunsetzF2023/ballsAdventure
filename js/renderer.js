@@ -73,21 +73,28 @@ export class Renderer {
     const wall = gameState.wall;
     const wallY = WORLD.h - WALL_H;
     
-    const wallGradient = this.ctx.createLinearGradient(0, wallY, 0, WORLD.h);
-    wallGradient.addColorStop(0, '#58a6ff');
-    wallGradient.addColorStop(1, '#3d5a80');
+    // 使用原始的粉白色渐变
+    const wallGradient = this.ctx.createLinearGradient(0, wallY, 0, wallY + WALL_H);
+    wallGradient.addColorStop(0, "rgba(255,220,245,0.92)");
+    wallGradient.addColorStop(1, "rgba(255,255,255,0.92)");
     this.ctx.fillStyle = wallGradient;
-    this.ctx.fillRect(0, wallY, WORLD.w, WALL_H);
+    this.ctx.strokeStyle = "rgba(0,0,0,0.10)";
+    this.ctx.lineWidth = 5;
     
-    const hpPercent = wall.hp / wall.maxHp;
-    const wallColor = hpPercent > 0.5 ? '#56d364' : hpPercent > 0.25 ? '#f0b429' : '#ff8c42';
-    const barHeight = 8;
-    const barY = wallY - 15;
+    // 原始的圆角矩形
+    this.ctx.beginPath();
+    this.ctx.roundRect(20, wallY, WORLD.w - 40, WALL_H + 18, 26);
+    this.ctx.fill();
+    this.ctx.stroke();
     
-    this.ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
-    this.ctx.fillRect(0, barY, WORLD.w, barHeight);
-    this.ctx.fillStyle = wallColor;
-    this.ctx.fillRect(0, barY, WORLD.w * hpPercent, barHeight);
+    // 原始的HP条位置和样式
+    const w = 250;
+    const h = 10;
+    const p = wall.hp / wall.maxHp;
+    this.ctx.fillStyle = "rgba(0,0,0,0.12)";
+    this.ctx.fillRect(WORLD.w / 2 - w / 2, wallY + 18, w, h);
+    this.ctx.fillStyle = "rgba(70,210,130,0.90)";
+    this.ctx.fillRect(WORLD.w / 2 - w / 2, wallY + 18, w * p, h);
     
     this.ctx.restore();
   }

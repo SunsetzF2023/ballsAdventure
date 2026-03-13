@@ -233,9 +233,12 @@ export class InputHandler {
     }
   }
 
-  // 绘制瞄准辅助线 - 使用原来的逻辑
+  // 绘制瞄准辅助线 - 使用原来的逻辑，添加球体
   drawAim(ctx) {
     if (!this.aiming.active) return;
+    
+    const card = CARDS.find((c) => c.id === this.selectedCardId);
+    if (!card) return;
     
     ctx.save();
     
@@ -246,11 +249,11 @@ export class InputHandler {
     const t = pull / 140; // 拖拽程度 0-1
     
     // 绘制弹弓线 - 使用原来的逻辑
-    const bandA = { x: SLING.x - SLING.r, y: SLING.y - SLING.r * 2 };
-    const bandB = { x: SLING.x + SLING.r, y: SLING.y - SLING.r * 2 };
+    const bandA = { x: SLING.x - 12, y: SLING.y - 46 };
+    const bandB = { x: SLING.x + 12, y: SLING.y - 46 };
     
     // 弹弓线颜色根据拉伸程度变化
-    ctx.strokeStyle = `rgba(139, 69, 19, ${0.25 + 0.55 * t})`;
+    ctx.strokeStyle = `rgba(255,90,165,${0.25 + 0.55 * t})`;
     ctx.lineWidth = 6;
     ctx.lineCap = 'round';
     
@@ -258,13 +261,33 @@ export class InputHandler {
     ctx.beginPath();
     ctx.moveTo(bandA.x, bandA.y);
     ctx.lineTo(this.aiming.pos.x, this.aiming.pos.y);
+    ctx.lineTo(bandB.x, bandB.y);
     ctx.stroke();
     
-    // 右边弹弓线
+    // 绘制球体 - 在拖拽位置
+    ctx.save();
+    ctx.translate(this.aiming.pos.x, this.aiming.pos.y);
+    
+    // 球体阴影
+    ctx.fillStyle = "rgba(0,0,0,0.12)";
     ctx.beginPath();
-    ctx.moveTo(bandB.x, bandB.y);
-    ctx.lineTo(this.aiming.pos.x, this.aiming.pos.y);
+    ctx.ellipse(6, card.radius * 0.62, card.radius * 0.92, card.radius * 0.42, 0, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // 球体主体 - 3D效果
+    const grd = ctx.createRadialGradient(-card.radius * 0.35, -card.radius * 0.35, 6, 0, 0, card.radius);
+    grd.addColorStop(0, "#ffffff");
+    grd.addColorStop(0.2, card.color);
+    grd.addColorStop(1, card.color + "cc");
+    ctx.fillStyle = grd;
+    ctx.strokeStyle = "rgba(0,0,0,0.12)";
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(0, 0, card.radius, 0, Math.PI * 2);
+    ctx.fill();
     ctx.stroke();
+    
+    ctx.restore();
     
     // 绘制轨迹预览
     if (pull > 10) {
@@ -278,31 +301,29 @@ export class InputHandler {
       const vx = Math.cos(angle) * speed;
       const vy = Math.sin(angle) * speed;
       
-      // 模拟轨迹
-      ctx.beginPath();
-      ctx.moveTo(this.aiming.start.x, this.aiming.start.y);
+      // 模拟轨迹 - 使用原始逻辑
+      let x = SLING.x + Math.cos(angle) * 12;
+      let y = SLING.y + Math.sin(angle) * 12;
+      let pvx = Math.cos(angle) * speed;
+      let pvy = Math.sin(angle) * speed;
       
-      let px = this.aiming.start.x;
-      let py = this.aiming.start.y;
-      let pvx = vx;
-      let pvy = vy;
-      
-      for (let i = 0; i < 25; i++) {
-        const dt = 0.05;
-        pvx *= Math.exp(-2.0 * dt);
-        pvy *= Math.exp(-2.0 * dt);
-        px += pvx * dt;
-        py += pvy * dt;
-        ctx.lineTo(px, py);
+      ctx.fillStyle = "rgba(80,80,90,0.20)";
+      for (let i = 0; i < 14; i++) {
+        const dt = 0.06;
+        const dragFactor = Math.exp(-card.drag * dt);
+        pvx *= dragFactor;
+        pvy *= dragFactor;
+        x += pvx * dt;
+        y += pvy * dt;
         
-        if (i % 3 === 0) {
-          ctx.stroke();
-          ctx.beginPath();
-          ctx.moveTo(px, py);
-        }
+        // 反弹预览
+        if (x < ARENA.l + 10 || x > ARENA.r - 10) pvx *= -0.84;
+        if (y < ARENA.t + 10 || y > ARENA.b - 10) pvy *= -0.84;
+        
+        ctx.beginPath();
+        ctx.arc(x, y, 4 - i * 0.12, 0, Math.PI * 2);
+        ctx.fill();
       }
-      
-      ctx.stroke();
     }
     
     ctx.restore();
