@@ -1,10 +1,16 @@
 import { WORLD, PORTAL, SLING, ARENA, WALL_H } from './config.js';
 import { gameState } from './gameState.js';
+import { InputHandler } from './input.js';
 
 export class Renderer {
   constructor(ctx, view) {
     this.ctx = ctx;
     this.view = view;
+    this.inputHandler = null;
+  }
+
+  setInputHandler(inputHandler) {
+    this.inputHandler = inputHandler;
   }
 
   clear() {
@@ -206,5 +212,10 @@ export class Renderer {
     this.drawMonsters();
     this.drawEffects();
     this.drawDamageNumbers();
+    
+    // 绘制瞄准线 - 在最后绘制
+    if (this.inputHandler) {
+      this.inputHandler.drawAim(this.ctx);
+    }
   }
 }

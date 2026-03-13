@@ -39,6 +39,10 @@ function init() {
   inputHandler = new InputHandler(canvas);
   console.log('输入处理器初始化完成');
   
+  // 设置inputHandler到renderer
+  renderer.setInputHandler(inputHandler);
+  console.log('InputHandler已设置到Renderer');
+  
   // 加载存档
   loadProgress();
   console.log('存档加载完成');
@@ -288,11 +292,6 @@ function gameLoop(timestamp) {
   // 渲染游戏
   if (renderer) {
     renderer.render();
-  }
-  
-  // 绘制瞄准线
-  if (inputHandler) {
-    inputHandler.drawAim(ctx);
   }
   
   // 继续循环
