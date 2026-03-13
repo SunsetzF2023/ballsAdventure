@@ -1,18 +1,18 @@
-// 游戏核心配置 - 彻底重新设计布局
-export const WORLD = { w: 400, h: 600 }; // 大幅缩小场地
-export const WALL_H = 60; // 更小的墙壁
-export const SLING = { x: WORLD.w / 2, y: WORLD.h - WALL_H - 20, r: 25 }; // 更小的弹弓
+// 游戏核心配置 - 完全按照原始game.js
+export const WORLD = { w: 800, h: 1000 }; // 原始尺寸
+export const WALL_H = 150; // 原始墙壁高度
+export const SLING = { x: WORLD.w / 2, y: WORLD.h - WALL_H - 20, r: 44 }; // 原始弹弓
 export const ARENA = {
-  l: 50,  // 场地左边界
-  r: WORLD.w - 50,  // 场地右边界
-  t: 80,  // 场地上边界
-  b: WORLD.h - WALL_H - 80,  // 场地下边界
+  l: 46,  // 原始场地左边界
+  r: WORLD.w - 46,  // 原始场地右边界
+  t: 230,  // 原始场地上边界
+  b: WORLD.h - WALL_H - 130,  // 原始场地边界
 };
-export const PORTAL = { x: WORLD.w / 2, y: ARENA.t - 40, r: 35 }; // 更小的传送门
+export const PORTAL = { x: WORLD.w / 2, y: ARENA.t - 68, r: 70 }; // 原始传送门
 
-// 游戏平衡参数
+// 游戏平衡参数 - 完全按照原始game.js
 export const GAME_BALANCE = {
-  initialMana: 5, // 给玩家一些初始法力
+  initialMana: 0, // 原始从0开始
   maxMana: 10,
   manaRegen: 1.35, // per second
   wallHp: 52,
@@ -29,7 +29,7 @@ export const CARDS = [
     name: "棉花骑士",
     cost: 2,
     weight: 1.05,
-    radius: 18, // 从26缩小到18
+    radius: 26, // 原始大小
     color: "#ff78b8",
     drag: 1.85,
     launchSpeedMul: 1.15,
@@ -44,7 +44,7 @@ export const CARDS = [
     name: "糖霜弓手",
     cost: 3,
     weight: 0.85,
-    radius: 16, // 从23缩小到16
+    radius: 23, // 原始大小
     color: "#67d6ff",
     drag: 2.8,
     launchSpeedMul: 1.35,
@@ -59,7 +59,7 @@ export const CARDS = [
     name: "果冻法师",
     cost: 4,
     weight: 0.72,
-    radius: 15, // 从21缩小到15
+    radius: 21, // 原始大小
     color: "#a67bff",
     drag: 2.2,
     launchSpeedMul: 0.95,
@@ -74,7 +74,7 @@ export const CARDS = [
     name: "软糖大盾",
     cost: 3,
     weight: 1.45,
-    radius: 20, // 从30缩小到20
+    radius: 30, // 原始大小
     color: "#ffcc57",
     drag: 1.5,
     launchSpeedMul: 0.75,
@@ -129,7 +129,7 @@ export const CARDS = [
     name: "烈焰法师",
     cost: 5,
     weight: 0.88,
-    radius: 15, // 从22缩小到15
+    radius: 22, // 原始大小
     color: "#ff6b35",
     drag: 2.0,
     launchSpeedMul: 1.0,
